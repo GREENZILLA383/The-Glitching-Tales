@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Tetris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rye&family=Sancreek&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="film-grain"></div>
+    <div class="vignette"></div>
+
+    <div class="game-wrapper">
+        <header>
+            <h1>Retro Tetris</h1>
+            <p class="subtitle">A High-Stakes Block Dropping Bout!</p>
+        </header>
+
+        <main class="game-container">
+            <div class="left-panel">
+                <div class="stats-box">
+                    <h2>Score</h2>
+                    <p id="score">0</p>
+                </div>
+                <div class="stats-box">
+                    <h2>Level</h2>
+                    <p id="level">1</p>
+                </div>
+                <div class="stats-box">
+                    <h2>Lines</h2>
+                    <p id="lines">0</p>
+                </div>
+                
+                <!-- Boss References -->
+                <div class="boss-reference">
+                    <p class="quote" id="boss-quote">"Don't deal with the Devil!"</p>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="tetris-canvas" width="300" height="600"></canvas>
+                <div id="start-screen" class="overlay-screen">
+                    <h2>READY?</h2>
+                    <p>Click Here to Start the Bout!</p>
+                </div>
+                <div id="game-over-screen" class="hidden overlay-screen">
+                    <h2>KNOCKOUT!</h2>
+                    <p>Press 'R' or Click Here to Retry</p>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="stats-box">
+                    <h2>Next</h2>
+                    <canvas id="next-canvas" width="120" height="120"></canvas>
+                </div>
+                <div class="controls-info">
+                    <h3>Controls</h3>
+                    <ul>
+                        <li><b>&larr; &rarr;</b> Move</li>
+                        <li><b>&uarr;</b> Rotate</li>
+                        <li><b>&darr;</b> Soft Drop</li>
+                        <li><b>Space</b> Hard Drop</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <audio id="bg-music" src="https://archive.org/download/cuphead-official-soundtrack/Cuphead%20OST%20MP3/13%20Floral%20Fury.mp3" preload="auto"></audio>
+
+    <script src="tetris.js"></script>
+</body>
+</html>

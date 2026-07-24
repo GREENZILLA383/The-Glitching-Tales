@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmashCup</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- The CRT / 1930s film filter overlay -->
+        <div id="film-overlay"></div>
+        
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <!-- UI Layer -->
+        <div id="ui-layer">
+            <div id="health-bar-container">
+                <div id="health-bar"></div>
+            </div>
+            <div id="player-health">HP: 3</div>
+            
+            <div id="start-screen" class="screen">
+                <h1>SmashCup</h1>
+                <p>Press [Z] to Start</p>
+                <div class="controls-info">
+                    <p>Arrows / WASD : Move</p>
+                    <p>Z : Jump</p>
+                    <p>X : Shoot</p>
+                    <p>C : Dash</p>
+                </div>
+            </div>
+            
+            <div id="game-over-screen" class="screen hidden">
+                <h1>KNOCKOUT!</h1>
+                <p>Press [Z] to Retry</p>
+            </div>
+            
+            <div id="victory-screen" class="screen hidden">
+                <h1>A BRAWL IS SURELY BREWING...<br>YOU WON!</h1>
+                <p>Press [Z] to play next boss</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets.js"></script>
+    <script src="projectiles.js"></script>
+    <script src="bosses.js"></script>
+    <script src="player.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
