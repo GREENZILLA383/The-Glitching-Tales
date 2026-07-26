@@ -12,7 +12,7 @@ class GameSystem3D {
         // Re-attach build3D functions which are lost in JSON serialization
         this.party[0].build3D = CHARACTERS.glitch.build3D;
         
-        this.worldProgression = ['mario', 'minecraft', 'pokemon', 'lost', 'sonic', 'amongus', 'animation'];
+        this.worldProgression = ['mario', 'minecraft', 'pokemon', 'lost', 'cuphead', 'magic', 'sonic', 'amongus', 'animation'];
         this.currentWorldIndex = 0;
         this.beatBoss = false;
         this.coins = 0;
@@ -200,6 +200,10 @@ class GameSystem3D {
             this.unlockCharacter('blong');
         } else if (completedWorld === 'pokemon') {
             this.unlockCharacter('ash');
+        } else if (completedWorld === 'cuphead') {
+            this.unlockCharacter('mugman');
+        } else if (completedWorld === 'magic') {
+            this.unlockCharacter('harry_potter');
         } else if (completedWorld === 'sonic') {
             this.unlockCharacter('sonic_char');
         } else if (completedWorld === 'amongus') {
@@ -364,7 +368,19 @@ class GameSystem3D {
             ];
         } else if (worldName === 'lost') {
             script = [
-                { speaker: 'System', text: 'The Cuphead Devil has been defeated! The portal is open again!' },
+                { speaker: 'System', text: 'The Giant Shovel Knight has been defeated!' },
+                { speaker: 'System', text: 'Transporting to the Cuphead dimension...' }
+            ];
+        } else if (worldName === 'cuphead') {
+            script = [
+                { speaker: 'System', text: 'Corrupted Cuphead has been defeated!' },
+                { speaker: 'Mugman', text: 'Oh golly, thanks for saving him! I will join your team!' },
+                { speaker: 'System', text: 'Transporting to the Magic dimension...' }
+            ];
+        } else if (worldName === 'magic') {
+            script = [
+                { speaker: 'System', text: 'Voldemort has been defeated!' },
+                { speaker: 'Harry', text: 'Brilliant! I will join you to defeat the Dark Lord!' },
                 { speaker: 'System', text: 'Transporting to the Sonic dimension...' }
             ];
         } else if (worldName === 'sonic') {
@@ -438,7 +454,19 @@ class GameSystem3D {
         } else if (worldName === 'lost') {
             script = [
                 { speaker: 'Glitch', text: 'Where are we? There are barely any games here...' },
-                { speaker: 'System', text: 'This is the Lost Dimension. The Cuphead Devil is guarding the portal back!' }
+                { speaker: 'System', text: 'This is the Lost Dimension. The Giant Shovel Knight is guarding the portal back!' }
+            ];
+        } else if (worldName === 'cuphead') {
+            script = [
+                { speaker: 'System', text: 'Entering the Cuphead dimension...' },
+                { speaker: 'Glitch', text: 'Wow, everything looks so vintage! Like an old cartoon.' },
+                { speaker: 'Mugman', text: 'Golly! You fellas gotta help! My brother Cuphead got corrupted!' }
+            ];
+        } else if (worldName === 'magic') {
+            script = [
+                { speaker: 'System', text: 'Entering the Magic dimension...' },
+                { speaker: 'Glitch', text: 'Is this Hogwarts? It looks so dark and mystical.' },
+                { speaker: 'Harry', text: 'Watch out! Voldemort is trying to steal the icons!' }
             ];
         } else if (worldName === 'sonic') {
             script = [

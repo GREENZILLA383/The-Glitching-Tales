@@ -126,10 +126,24 @@ class Overworld3D {
         } else if (worldName === 'lost') {
             floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }); // Dark metallic floor
             treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x444444, map: TextureGenerator.metalTexture }); // Grey structures
-            enemyType = ENEMIES.goomba; // Void enemies? Just generic for now
+            enemyType = ENEMIES.lost_soul; // Spawn Lost Souls
             bossType = BOSSES.lost_boss;
             skyAsset = window.IMG_LOST_BG;
             skyIntensity = 0.5;
+        } else if (worldName === 'cuphead') {
+            floorMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, map: TextureGenerator.dirtTexture }); // Sepia/Vintage paper color
+            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Brown structures
+            enemyType = ENEMIES.cuphead_minion;
+            bossType = BOSSES.cuphead_boss;
+            skyAsset = null;
+            skyIntensity = 0.9;
+        } else if (worldName === 'magic') {
+            floorMat = new THREE.MeshStandardMaterial({ color: 0x1a237e, map: TextureGenerator.stoneTexture }); // Dark mystical stone
+            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x4a148c }); // Purple magical trees
+            enemyType = ENEMIES.death_eater;
+            bossType = BOSSES.magic_boss;
+            skyAsset = null;
+            skyIntensity = 0.4;
         } else if (worldName === 'animation') {
             floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.1, roughness: 0.8 }); // white grid floor
             treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x00a8ff }); // blue digital structures
@@ -170,6 +184,8 @@ class Overworld3D {
         if (worldName === 'amongus' || worldName === 'lost') fogColor = 0x000000;
         if (worldName === 'animation') fogColor = 0x00a8ff;
         if (worldName === 'sonic') fogColor = 0x4dd0e1; // Light cyan sky blue
+        if (worldName === 'cuphead') fogColor = 0xd2b48c; // Sepia fog
+        if (worldName === 'magic') fogColor = 0x1a237e; // Dark blue/purple fog
         if (worldName === 'bonus') fogColor = 0xffd700;
         this.scene.fog = new THREE.Fog(fogColor, 20, 150);
 
