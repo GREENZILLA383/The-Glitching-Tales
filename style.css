@@ -1010,3 +1010,59 @@ input[type=range]::-webkit-slider-runnable-track {
     100% { text-shadow: -0.025em 0 0 #00fffc, -0.025em -0.025em 0 #fc00ff, -0.025em -0.05em 0 #fffc00; }
 }
 
+/* Player HUD (real-time HP/MP/Stamina/weapon) */
+#player-hud {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 90;
+    background: rgba(0,0,0,0.55);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'Outfit', sans-serif;
+    color: white;
+    min-width: 220px;
+}
+.hud-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 0.85rem;
+}
+.hud-label {
+    width: 32px;
+    font-weight: 700;
+}
+.hud-bar {
+    flex: 1;
+    height: 12px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    overflow: hidden;
+}
+.hud-fill {
+    height: 100%;
+    width: 100%;
+    transition: width 0.2s ease-out;
+}
+.hud-hp { background: linear-gradient(90deg, #ff4757, #ff6b81); }
+.hud-mp { background: linear-gradient(90deg, #3742fa, #70a1ff); }
+.hud-stamina { background: linear-gradient(90deg, #2ed573, #7bed9f); }
+
+/* Character creation */
+.cc-skill-grid {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    width: 100%;
+}
+.cc-skill-btn {
+    flex: 1;
+}
+.cc-skill-selected {
+    border-color: var(--primary-color, #fbbf24) !important;
+    color: var(--primary-color, #fbbf24) !important;
+    box-shadow: 0 0 12px rgba(251,191,36,0.5);
+}
+

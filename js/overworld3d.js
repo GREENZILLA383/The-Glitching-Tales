@@ -1,25 +1,34 @@
+// World layout constants (single seamless world, no scene-swap between chapters).
+// Emerald Coast spans roughly z = +40 (spawn) down to z = -95 (Croton's temple).
+// A descent/transition sits around z = -95 to -115.
+// Ruined Ocean spans z = -115 down to Oblongtalo's Arena at z = -210.
+const WORLD = {
+    playerSpawn: { x: 0, z: 30 },
+    barnicoPos: { x: 6, z: 14 },
+    octaPos: { x: -6, z: 16 },
+    shopkeeperPos: { x: 12, z: 24 },
+    crotonTempleZ: -90,
+    oceanStartZ: -115,
+    handWaveTriggerZ: -130,
+    arenaZ: -210,
+    oceanFogThresholdZ: -100
+};
+
 class Overworld3D {
     constructor() {
         this.container = document.getElementById('canvas-container');
         this.scene = new THREE.Scene();
-        
-        // Skybox initialized in buildProceduralMap
-        
-        // Setup Camera
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 10, 20); // Initial 3rd person offset
 
-        // Setup Renderer
+        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        this.camera.position.set(0, 10, 20);
+
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
         this.container.appendChild(this.renderer.domElement);
 
-        // Setup OrbitControls for mouse look
-        // We defer this until window load so THREE.OrbitControls is definitely loaded
         this.controls = null;
 
-        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         this.scene.add(ambientLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -29,450 +38,313 @@ class Overworld3D {
 
         this.worldGroup = new THREE.Group();
         this.scene.add(this.worldGroup);
-        
+
         this.entities = [];
         this.playerObj = null;
         this.keys = {};
         this.velocityY = 0;
         this.isJumping = false;
-        
-        // Initialize Procedural Textures
-        if (typeof TextureGenerator !== 'undefined') TextureGenerator.init();
+        this.grounded = true;
 
-        // Create an invisible target for the camera to orbit around
+        this.isClimbing = false;
+        this.isGliding = false;
+        this.lastFrameTime = performance.now();
+
         this.cameraTarget = new THREE.Vector3(0, 5, 0);
-        this.colliders = []; // Array of THREE.Box3 for collisions
-        this.activePartyIndex = 0;
+        this.colliders = [];
 
-        // Mobile Device Detection
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // Manual camera look state for mobile
         this.cameraYaw = 0;
         this.cameraPitch = 0;
+
+        this.handWaveTriggered = false;
 
         this.bindEvents();
     }
 
     start(party) {
         if (this.isMobile) {
-            // Show mobile controls
             const mobileOverlay = document.getElementById('mobile-controls');
             if (mobileOverlay) mobileOverlay.classList.remove('hidden');
         } else {
-            // Initialize PointerLockControls here if not already done, ONLY on desktop
             if (!this.controls && typeof THREE.PointerLockControls !== 'undefined') {
                 this.controls = new THREE.PointerLockControls(this.camera, document.body);
-                
-                // Click to lock pointer
                 document.getElementById('canvas-container').addEventListener('click', () => {
-                    if (window.gameSystem.state === 'overworld') {
+                    if (window.gameSystem.state === 'overworld' || window.gameSystem.state === 'gauntlet') {
                         this.controls.lock();
                     }
                 });
             }
         }
 
-        // Build Player
-        this.activePartyIndex = 0;
-        this.playerObj = party[this.activePartyIndex].build3D();
-        this.playerObj.position.set(0, 0, 0);
+        this.playerObj = party[0].build3D();
+        this.playerObj.position.set(WORLD.playerSpawn.x, 0, WORLD.playerSpawn.z);
         this.scene.add(this.playerObj);
 
-        this.buildProceduralMap();
+        this.buildWorld();
         this.animate();
     }
 
-    buildProceduralMap(worldName = 'mario') {
+    // --- World construction -------------------------------------------------
+
+    buildWorld() {
         if (this.worldGroup) this.scene.remove(this.worldGroup);
         this.worldGroup = new THREE.Group();
         this.scene.add(this.worldGroup);
 
-        // Remove old entities
-        this.entities.forEach(ent => {
-            if (ent.mesh && ent.mesh.parent) {
-                ent.mesh.parent.remove(ent.mesh);
-            }
-        });
+        this.entities.forEach(ent => { if (ent.mesh && ent.mesh.parent) ent.mesh.parent.remove(ent.mesh); });
         this.entities = [];
-
-        // Set World Styles
-        let floorMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, map: TextureGenerator.grassTexture }); // Mario grass
-        let treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x166534, map: TextureGenerator.leafTexture });
-        let skyIntensity = 1.0;
-        let enemyType = ENEMIES.goomba;
-        let bossType = BOSSES.mario_boss;
-        let skyAsset = ASSETS.mario_world_bg_1783460841676;
-        
-        if (worldName === 'minecraft') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, map: TextureGenerator.dirtTexture }); // dirt
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x228b22, map: TextureGenerator.leafTexture }); // minecraft leaves
-            enemyType = ENEMIES.zombie; // Zombies in Minecraft!
-            bossType = BOSSES.minecraft_boss;
-            skyAsset = ASSETS.minecraft_village_bg_1783475064320;
-        } else if (worldName === 'pokemon') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, map: TextureGenerator.dirtTexture }); // yellow electric arena
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0xff0000, map: TextureGenerator.leafTexture }); // red trees
-            enemyType = ENEMIES.pokemon_enemy;
-            bossType = BOSSES.pokemon_boss;
-            skyAsset = null;
-        } else if (worldName === 'amongus') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0x334155, map: TextureGenerator.metalTexture }); // spaceship floor
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, map: TextureGenerator.metalTexture }); // metal structures
-            enemyType = ENEMIES.amongus_enemy;
-            skyIntensity = 0.3; // dark space
-            bossType = BOSSES.amongus_boss;
-            skyAsset = null;
-        } else if (worldName === 'lost') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.2 }); // Dark metallic floor
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x444444, map: TextureGenerator.metalTexture }); // Grey structures
-            enemyType = ENEMIES.lost_soul; // Spawn Lost Souls
-            bossType = BOSSES.lost_boss;
-            skyAsset = window.IMG_LOST_BG;
-            skyIntensity = 0.5;
-        } else if (worldName === 'cuphead') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, map: TextureGenerator.dirtTexture }); // Sepia/Vintage paper color
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Brown structures
-            enemyType = ENEMIES.cuphead_minion;
-            bossType = BOSSES.cuphead_boss;
-            skyAsset = null;
-            skyIntensity = 0.9;
-        } else if (worldName === 'magic') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0x1a237e, map: TextureGenerator.stoneTexture }); // Dark mystical stone
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x4a148c }); // Purple magical trees
-            enemyType = ENEMIES.death_eater;
-            bossType = BOSSES.magic_boss;
-            skyAsset = null;
-            skyIntensity = 0.4;
-        } else if (worldName === 'animation') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.1, roughness: 0.8 }); // white grid floor
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x00a8ff }); // blue digital structures
-            enemyType = ENEMIES.animation_enemy;
-            bossType = BOSSES.animation_boss;
-            skyAsset = ASSETS.animation_dimension_bg;
-        } else if (worldName === 'sonic') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.grassTexture }); // Checkered style grass
-            treeLeavesMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.leafTexture });
-            enemyType = ENEMIES.sonic_enemy;
-            bossType = BOSSES.sonic_boss;
-            skyAsset = ASSETS.sonic_bg;
-        } else if (worldName === 'bonus') {
-            floorMat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.3, roughness: 0.6 }); // Gold floor, not black
-            skyIntensity = 0.8; // Brighter
-            skyAsset = null;
-        }
-
-        this.scene.backgroundIntensity = skyIntensity;
-        
-        if (skyAsset) {
-            const textureLoader = new THREE.TextureLoader();
-            const skyTexture = textureLoader.load(skyAsset);
-            skyTexture.mapping = THREE.EquirectangularReflectionMapping;
-            this.scene.background = skyTexture;
-            this.scene.environment = skyTexture;
-        } else if (worldName === 'tutorial') {
-            this.scene.background = new THREE.Color(0xffffff); // White void
-        } else {
-            this.scene.background = new THREE.Color(worldName === 'amongus' ? 0x000000 : 0x87ceeb);
-        }
-        
-        // Add Fog for atmosphere
-        let fogColor = 0x87CEEB;
-        if (worldName === 'tutorial') fogColor = 0xffffff;
-        if (worldName === 'minecraft') fogColor = 0x5c4033;
-        if (worldName === 'pokemon') fogColor = 0xfacc15;
-        if (worldName === 'amongus' || worldName === 'lost') fogColor = 0x000000;
-        if (worldName === 'animation') fogColor = 0x00a8ff;
-        if (worldName === 'sonic') fogColor = 0x4dd0e1; // Light cyan sky blue
-        if (worldName === 'cuphead') fogColor = 0xd2b48c; // Sepia fog
-        if (worldName === 'magic') fogColor = 0x1a237e; // Dark blue/purple fog
-        if (worldName === 'bonus') fogColor = 0xffd700;
-        this.scene.fog = new THREE.Fog(fogColor, 20, 150);
-
-        // Ground Plane
-        const floorGeo = new THREE.PlaneGeometry(500, 500);
-        
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.rotation.x = -Math.PI / 2;
-        floor.receiveShadow = true;
-        this.worldGroup.add(floor);
         this.colliders = [];
 
-        // Procedural Scenery Generation
-        for (let i = 0; i < 200; i++) {
-            const tx = (Math.random() - 0.5) * 400;
-            const tz = (Math.random() - 0.5) * 400;
-            if (Math.abs(tx) < 20 && Math.abs(tz) < 20) continue; // keep clearing
+        this.scene.background = new THREE.Color(0x87ceeb);
+        this.scene.fog = new THREE.Fog(0x87ceeb, 20, 180);
+        this.coastFogColor = new THREE.Color(0x9fd8e8);
+        this.oceanFogColor = new THREE.Color(0x0d2b3a);
+        this.coastBgColor = new THREE.Color(0x87ceeb);
+        this.oceanBgColor = new THREE.Color(0x081820);
 
-            const objGroup = new THREE.Group();
-            let isPipe = false;
-            let isExitPipe = false;
-            let isCoin = false;
-            
-            if (worldName === 'bonus') {
-                if (i === 0) { // Only one exit pipe
-                    const pipeGeo = new THREE.CylinderGeometry(2, 2, 6);
-                    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.metalTexture });
-                    const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-                    pipe.position.y = 3;
-                    objGroup.add(pipe);
-                    isExitPipe = true;
-                } else if (Math.random() > 0.5) {
-                    // Golden coins/blocks
-                    const coinGeo = new THREE.CylinderGeometry(2, 2, 0.5);
-                    const coinMat = new THREE.MeshStandardMaterial({ color: 0xffea00, emissive: 0xffa500, emissiveIntensity: 0.4, metalness: 0.5, roughness: 0.2 });
-                    const coin = new THREE.Mesh(coinGeo, coinMat);
-                    coin.position.y = 2;
-                    coin.rotation.x = Math.PI / 2;
-                    objGroup.add(coin);
-                    isCoin = true;
-                }
-            } else if (worldName === 'mario') {
-                if (Math.random() > 0.97) {
-                    // Warp Pipe (3% chance)
-                    const pipeGeo = new THREE.CylinderGeometry(2, 2, 6);
-                    const pipeMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.metalTexture });
-                    const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-                    pipe.position.y = 3;
-                    pipe.castShadow = true;
-                    objGroup.add(pipe);
-                    const rimGeo = new THREE.CylinderGeometry(2.3, 2.3, 1);
-                    const rim = new THREE.Mesh(rimGeo, pipeMat);
-                    rim.position.y = 6.5;
-                    rim.castShadow = true;
-                    objGroup.add(rim);
-                    isPipe = true;
-                } else if (Math.random() > 0.6) {
-                    // Floating Brick
-                    const brickGeo = new THREE.BoxGeometry(3, 3, 3);
-                    const brickMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, map: TextureGenerator.brickTexture });
-                    const brick = new THREE.Mesh(brickGeo, brickMat);
-                    brick.position.y = 8 + Math.random() * 5;
-                    brick.castShadow = true;
-                    objGroup.add(brick);
-                } else {
-                    // Standard Tree
-                    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 4), new THREE.MeshStandardMaterial({ color: 0x78350f, map: TextureGenerator.woodTexture }));
-                    trunk.position.y = 2;
-                    trunk.castShadow = true;
-                    objGroup.add(trunk);
-                    const leaves = new THREE.Mesh(new THREE.ConeGeometry(3, 8, 8), treeLeavesMat);
-                    leaves.position.y = 6;
-                    leaves.castShadow = true;
-                    objGroup.add(leaves);
-                }
-                // Add Smooth Cone Grass Clusters to Mario World
-                if (Math.random() > 0.5) {
-                    const grassGeo = new THREE.ConeGeometry(0.3, 2, 5);
-                    const grassMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.leafTexture });
-                    for(let j=0; j<8; j++) {
-                        const grass = new THREE.Mesh(grassGeo, grassMat);
-                        grass.position.set((Math.random()-0.5)*4, 1, (Math.random()-0.5)*4);
-                        grass.rotation.x = (Math.random()-0.5)*0.5;
-                        grass.rotation.z = (Math.random()-0.5)*0.5;
-                        objGroup.add(grass);
-                    }
-                }
-            } else if (worldName === 'minecraft') {
-                if (Math.random() > 0.9) {
-                    // Hut
-                    const wallGeo = new THREE.BoxGeometry(10, 8, 10);
-                    const wallMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, map: TextureGenerator.woodTexture });
-                    const wall = new THREE.Mesh(wallGeo, wallMat);
-                    wall.position.y = 4;
-                    wall.castShadow = true;
-                    objGroup.add(wall);
-                    const roofGeo = new THREE.ConeGeometry(8, 5, 4);
-                    const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, map: TextureGenerator.woodTexture });
-                    const roof = new THREE.Mesh(roofGeo, roofMat);
-                    roof.position.y = 10.5;
-                    roof.rotation.y = Math.PI / 4;
-                    roof.castShadow = true;
-                    objGroup.add(roof);
-                } else {
-                    // Minecraft Blocky Tree
-                    const trunk = new THREE.Mesh(new THREE.BoxGeometry(1, 5, 1), new THREE.MeshStandardMaterial({ color: 0x5c4033, map: TextureGenerator.woodTexture }));
-                    trunk.position.y = 2.5;
-                    trunk.castShadow = true;
-                    objGroup.add(trunk);
-                    const leaves = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 4), treeLeavesMat);
-                    leaves.position.y = 6;
-                    leaves.castShadow = true;
-                    objGroup.add(leaves);
-                }
-            } else if (worldName === 'pokemon') {
-                // Tall Grass Patches
-                const grassGeo = new THREE.ConeGeometry(0.3, 3, 5);
-                const grassMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.leafTexture });
-                for(let j=0; j<8; j++) {
-                    const grass = new THREE.Mesh(grassGeo, grassMat);
-                    grass.position.set((Math.random()-0.5)*4, 1.5, (Math.random()-0.5)*4);
-                    grass.rotation.x = (Math.random()-0.5)*0.5;
-                    grass.rotation.z = (Math.random()-0.5)*0.5;
-                    objGroup.add(grass);
-                }
-            } else if (worldName === 'amongus') {
-                // Spaceship Crates & Corridors
-                const crateGeo = new THREE.BoxGeometry(4, 4, 4);
-                const crateMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.2, map: TextureGenerator.metalTexture });
-                const crate = new THREE.Mesh(crateGeo, crateMat);
-                crate.position.y = 2;
-                crate.castShadow = true;
-                objGroup.add(crate);
-            } else if (worldName === 'sonic') {
-                if (Math.random() > 0.8) {
-                    // Palm tree
-                    const trunkGeo = new THREE.CylinderGeometry(0.3, 0.5, 6);
-                    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, map: TextureGenerator.woodTexture });
-                    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-                    trunk.position.y = 3;
-                    objGroup.add(trunk);
-                    
-                    const leafGeo = new THREE.ConeGeometry(3, 1.5, 4);
-                    const leafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, map: TextureGenerator.leafTexture });
-                    const leaves = new THREE.Mesh(leafGeo, leafMat);
-                    leaves.position.y = 6.5;
-                    leaves.rotation.x = Math.PI; // upside down cone for palm look
-                    objGroup.add(leaves);
-                } else if (Math.random() > 0.5) {
-                    // Loop-de-loop decoration (Torus)
-                    const loopGeo = new THREE.TorusGeometry(3, 0.5, 8, 20);
-                    const loopMat = new THREE.MeshStandardMaterial({ color: 0x964B00, map: TextureGenerator.brickTexture });
-                    const loop = new THREE.Mesh(loopGeo, loopMat);
-                    loop.position.y = 3;
-                    loop.rotation.y = Math.random() * Math.PI;
-                    objGroup.add(loop);
-                }
-            }
+        // ---- One big ground plane spanning both zones ----
+        const floorGeo = new THREE.PlaneGeometry(300, 700, 1, 1);
+        const floorMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+        const colors = [];
+        const posAttr = floorGeo.attributes.position;
+        const sandColor = new THREE.Color(0xe8d9a0);
+        const oceanFloorColor = new THREE.Color(0x1f3d3a);
+        for (let i = 0; i < posAttr.count; i++) {
+            // plane is built in XY before rotation; local Y maps to world Z after rotation
+            const localY = posAttr.getY(i);
+            const worldZ = -localY; // rotated -90 about X below, flips sign
+            const t = THREE.MathUtils.clamp((worldZ - (-40)) / (WORLD.oceanStartZ - (-40)), 0, 1);
+            const c = sandColor.clone().lerp(oceanFloorColor, t);
+            colors.push(c.r, c.g, c.b);
+        }
+        floorGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(0, 0, -155); // center the 700-long plane over both zones
+        floor.receiveShadow = true;
+        this.worldGroup.add(floor);
 
-            // Global Coin Spawns (except in bonus where they spawn above)
-            if (worldName !== 'bonus' && Math.random() > 0.95) {
-                const coinGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.4);
-                const coinMat = new THREE.MeshStandardMaterial({ color: 0xffea00, emissive: 0xffa500, emissiveIntensity: 0.4, metalness: 0.5, roughness: 0.2 });
-                const coin = new THREE.Mesh(coinGeo, coinMat);
-                coin.position.set(0, 2, 0); // Local to objGroup
-                coin.rotation.x = Math.PI / 2;
-                objGroup.add(coin);
-                isCoin = true;
-            }
+        this.buildEmeraldCoast();
+        this.buildTransition();
+        this.buildRuinedOcean();
+    }
 
-            objGroup.position.set(tx, 0, tz);
-            const scale = 0.5 + Math.random() * 1.5;
-            objGroup.scale.set(scale, scale, scale);
-            this.worldGroup.add(objGroup);
-            
-            // Add Bounding Box for Collision
-            const box = new THREE.Box3().setFromObject(objGroup);
-            // Slightly reduce box size to make movement forgiving
-            box.expandByScalar(-0.5); 
-            if (isPipe) box.isPipe = true;
-            if (isExitPipe) box.isExitPipe = true;
-            if (isCoin) box.isCoin = true;
-            
-            // Add a reference to the group so we can remove it later
-            box.meshGroup = objGroup;
-            
-            this.colliders.push(box);
+    addCollider(mesh, opts = {}) {
+        const box = new THREE.Box3().setFromObject(mesh);
+        if (opts.shrink) box.expandByScalar(-opts.shrink);
+        box.meshGroup = mesh;
+        if (opts.climbable) box.climbable = true;
+        if (opts.isCoin) box.isCoin = true;
+        this.colliders.push(box);
+        return box;
+    }
+
+    addProp(group, x, z, colliderOpts) {
+        group.position.set(x, 0, z);
+        this.worldGroup.add(group);
+        if (colliderOpts !== false) this.addCollider(group, colliderOpts || { shrink: 0.5 });
+    }
+
+    buildHut(x, z) {
+        const g = new THREE.Group();
+        const wall = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 4, 10), new THREE.MeshStandardMaterial({ color: 0xd9c39a, roughness: 0.9 }));
+        wall.position.y = 2;
+        wall.castShadow = true;
+        g.add(wall);
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(4, 3, 10), new THREE.MeshStandardMaterial({ color: 0x7a5a3a }));
+        roof.position.y = 5.5;
+        roof.castShadow = true;
+        g.add(roof);
+        this.addProp(g, x, z, { shrink: 0.5 });
+    }
+
+    buildPalmTree(x, z) {
+        const g = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x8b6b3f }));
+        trunk.position.y = 3;
+        g.add(trunk);
+        const leaves = new THREE.Mesh(new THREE.ConeGeometry(3, 1.5, 4), new THREE.MeshStandardMaterial({ color: 0x2f9e44 }));
+        leaves.position.y = 6.5;
+        leaves.rotation.x = Math.PI;
+        g.add(leaves);
+        this.addProp(g, x, z, { shrink: 1.2 });
+    }
+
+    buildCrabRock(x, z) {
+        const g = new THREE.Group();
+        const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2, 0), new THREE.MeshStandardMaterial({ color: 0xb08a5a, roughness: 1 }));
+        rock.position.y = 1.5;
+        g.add(rock);
+        this.addProp(g, x, z, { shrink: 0.8 });
+    }
+
+    buildTempleWall(x, z, climbable = true) {
+        const g = new THREE.Group();
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(10, 12, 2), new THREE.MeshStandardMaterial({ color: 0x9a8b6f, roughness: 0.9 }));
+        wall.position.y = 6;
+        wall.castShadow = true;
+        g.add(wall);
+        g.position.set(x, 0, z);
+        this.worldGroup.add(g);
+        this.addCollider(g, { shrink: 0.3, climbable });
+    }
+
+    buildCoralTower(x, z) {
+        const g = new THREE.Group();
+        const segCount = 3 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < segCount; i++) {
+            const w = 3.5 - i * 0.7;
+            const seg = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.5, w * 0.6, 2.5, 7),
+                new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0x3f6b6a : 0x2c4d4c, roughness: 1 }));
+            seg.position.y = 1.25 + i * 2.5;
+            seg.rotation.y = Math.random() * Math.PI;
+            g.add(seg);
+        }
+        this.addProp(g, x, z, { shrink: 0.5 });
+    }
+
+    buildCoin(x, z) {
+        const geo = new THREE.CylinderGeometry(0.8, 0.8, 0.25, 12);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffea00, emissive: 0xffa500, emissiveIntensity: 0.4, metalness: 0.6, roughness: 0.2 });
+        const coin = new THREE.Mesh(geo, mat);
+        coin.rotation.x = Math.PI / 2;
+        coin.position.set(x, 1.2, z);
+        this.worldGroup.add(coin);
+        this.addCollider(coin, { shrink: -0.3, isCoin: true });
+    }
+
+    buildEmeraldCoast() {
+        // Octo Village huts
+        [[-14, 8], [16, 6], [-10, 22], [4, -6]].forEach(([x, z]) => this.buildHut(x, z));
+
+        // Barnico (story NPC, repeatable dialogue)
+        const barnico = VoxelBuilder.buildCharacter(buildBarnicoParts());
+        barnico.position.set(WORLD.barnicoPos.x, 0, WORLD.barnicoPos.z);
+        this.scene.add(barnico);
+        this.entities.push({ type: 'story_npc', storyId: 'barnico', mesh: barnico });
+
+        // Octa (one-time recruit trigger)
+        const octa = VoxelBuilder.buildCharacter(buildOctaParts());
+        octa.position.set(WORLD.octaPos.x, 0, WORLD.octaPos.z);
+        this.scene.add(octa);
+        this.entities.push({ type: 'story_npc', storyId: 'octa_join', oneTime: true, mesh: octa });
+
+        // Wandering Shopkeeper
+        const shopkeeper = VoxelBuilder.buildCharacter(buildShopkeeperParts());
+        shopkeeper.position.set(WORLD.shopkeeperPos.x, 0, WORLD.shopkeeperPos.z);
+        this.scene.add(shopkeeper);
+        this.entities.push({ type: 'shopkeeper', mesh: shopkeeper });
+
+        // Palm trees + crab rocks scattered along the coast
+        for (let i = 0; i < 20; i++) {
+            const x = (Math.random() - 0.5) * 120;
+            const z = 30 - Math.random() * 60;
+            if (Math.abs(x) < 12 && z > 0) continue; // keep village clearing
+            if (Math.random() > 0.5) this.buildPalmTree(x, z); else this.buildCrabRock(x, z);
         }
 
-        // Spawn Enemies and Shopkeeper (Don't spawn in bonus room)
-        if (worldName === 'tutorial') {
-            // Only spawn the hologoomba
-            const holo = ENEMIES.hologoomba.build3D();
-            holo.position.set(0, 1, -15);
-            this.scene.add(holo);
-            this.entities.push({ 
-                type: 'enemy', 
-                mesh: holo,
-                data: JSON.parse(JSON.stringify(ENEMIES.hologoomba)) 
-            });
-        } else if (worldName !== 'bonus') {
-            
-            // Spawn 3 Distinct Shops
-            const shopTypes = ['wizard_shop', 'sword_shop', 'armor_shop'];
-            const shopPositions = [
-                {x: -20, z: -20}, // Wizard
-                {x: 20, z: -20},  // Sword
-                {x: -20, z: 20}   // Armor
-            ];
-            
-            for (let i = 0; i < 3; i++) {
-                const sType = shopTypes[i];
-                if (SHOPKEEPERS[sType]) {
-                    const shopkeeper = SHOPKEEPERS[sType](worldName);
-                    shopkeeper.position.set(shopPositions[i].x, 1.5, shopPositions[i].z);
-                    this.scene.add(shopkeeper);
-                    
-                    this.entities.push({ 
-                        type: 'shopkeeper',
-                        shopType: sType,
-                        mesh: shopkeeper
-                    });
-                }
-            }
-            
-            // Physical Bounty Board next to the Armor Shop
-            const bbGeo = new THREE.BoxGeometry(4, 3, 0.5);
-            const bbMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, map: TextureGenerator.woodTexture });
-            const bbMesh = new THREE.Mesh(bbGeo, bbMat);
-            bbMesh.position.set(-15, 2, 20); // Near Armor shop
-            bbMesh.castShadow = true;
-            this.scene.add(bbMesh);
-            this.entities.push({
-                type: 'bounty_board',
-                mesh: bbMesh
-            });
-            const bbCol = new THREE.Box3().setFromObject(bbMesh);
-            bbCol.expandByScalar(2); // Interact radius
-            bbCol.meshGroup = bbMesh;
-            bbCol.isBountyBoard = true;
-            this.colliders.push(bbCol);
+        // Path toward the temple, more crab rocks
+        for (let i = 0; i < 14; i++) {
+            const x = (Math.random() - 0.5) * 60;
+            const z = -20 - Math.random() * 60;
+            this.buildCrabRock(x, z);
+        }
 
-            for (let i = 0; i < 15; i++) {
-                const enemy = enemyType.build3D();
-                let ex = 0, ez = 0;
-                do {
-                    ex = (Math.random() - 0.5) * 200;
-                    ez = (Math.random() - 0.5) * 200;
-                } while (Math.abs(ex) < 30 && Math.abs(ez) < 30); // Keep away from spawn
-                
-                enemy.position.set(ex, 1, ez);
-                this.scene.add(enemy);
-                this.entities.push({ 
-                    type: 'enemy', 
-                    mesh: enemy,
-                    data: JSON.parse(JSON.stringify(enemyType)) 
-                });
-            }
+        // A few coins to collect
+        for (let i = 0; i < 10; i++) {
+            this.buildCoin((Math.random() - 0.5) * 80, 20 - Math.random() * 100);
+        }
 
-            // Spawn Boss (Far away)
-            const boss = bossType.build3D();
-            boss.scale.set(3, 3, 3);
-            boss.position.set(0, 0, -80);
-            this.scene.add(boss);
-            this.entities.push({ 
-                type: 'boss', 
-                mesh: boss,
-                data: JSON.parse(JSON.stringify(bossType)) 
-            });
+        // Croton's Temple: climbable flanking walls + Croton himself + crab minions
+        this.buildTempleWall(-14, WORLD.crotonTempleZ - 5);
+        this.buildTempleWall(14, WORLD.crotonTempleZ - 5);
+
+        const croton = BOSSES.croton.build3D();
+        const s = BOSSES.croton.scale || 1;
+        croton.scale.set(s, s, s);
+        croton.position.set(0, 0, WORLD.crotonTempleZ);
+        this.scene.add(croton);
+        this.entities.push({ type: 'boss', bossId: 'croton', mesh: croton, data: this.scaleByDifficulty(BOSSES.croton), aiState: { cooldown: 0 } });
+
+        for (let i = 0; i < 5; i++) {
+            const minion = ENEMIES.crab_minion.build3D();
+            const x = (Math.random() - 0.5) * 50;
+            const z = -25 - Math.random() * 55;
+            minion.position.set(x, 0, z);
+            this.scene.add(minion);
+            this.entities.push({ type: 'enemy', mesh: minion, data: this.scaleByDifficulty(ENEMIES.crab_minion), aiState: { cooldown: 0, homeX: x, homeZ: z } });
         }
     }
 
+    scaleByDifficulty(def) {
+        const data = JSON.parse(JSON.stringify(def));
+        const mult = (window.gameSystem && window.gameSystem.difficultyMultiplier) || 1;
+        if (data.maxHp !== undefined) { data.maxHp = Math.max(1, Math.round(data.maxHp * mult)); data.hp = data.maxHp; }
+        if (data.attack !== undefined) data.attack = Math.max(1, Math.round(data.attack * mult));
+        return data;
+    }
+
+    buildTransition() {
+        // A short descent connecting the coast to the ocean floor, plus the forced hand-wave trigger.
+        const cliffGeo = new THREE.BoxGeometry(60, 6, 4);
+        const cliff = new THREE.Mesh(cliffGeo, new THREE.MeshStandardMaterial({ color: 0x6b7a6a, roughness: 1 }));
+        cliff.position.set(0, -3, WORLD.oceanStartZ + 8);
+        this.worldGroup.add(cliff);
+
+        // Invisible trigger volume for the "slammed by a hand-shaped wave" story beat.
+        const triggerBox = new THREE.Box3(
+            new THREE.Vector3(-30, -2, WORLD.handWaveTriggerZ - 4),
+            new THREE.Vector3(30, 6, WORLD.handWaveTriggerZ + 4)
+        );
+        triggerBox.isHandWaveTrigger = true;
+        this.colliders.push(triggerBox);
+    }
+
+    buildRuinedOcean() {
+        for (let i = 0; i < 18; i++) {
+            const x = (Math.random() - 0.5) * 90;
+            const z = WORLD.oceanStartZ - Math.random() * 80;
+            this.buildCoralTower(x, z);
+        }
+
+        for (let i = 0; i < 6; i++) {
+            const wraith = ENEMIES.sea_wraith.build3D();
+            const x = (Math.random() - 0.5) * 70;
+            const z = WORLD.oceanStartZ - 10 - Math.random() * 70;
+            wraith.position.set(x, 0, z);
+            this.scene.add(wraith);
+            this.entities.push({ type: 'enemy', mesh: wraith, data: this.scaleByDifficulty(ENEMIES.sea_wraith), aiState: { cooldown: 0, homeX: x, homeZ: z } });
+        }
+
+        // Oblongtalo's Arena: ring of pillars + oval floor accent. Oblongtalo himself is NOT
+        // spawned here - he's summoned directly by triggerHandWaveEvent's aftermath (see main3d.js).
+        const arenaGroup = new THREE.Group();
+        const pillarMat = new THREE.MeshStandardMaterial({ color: 0x4a5a5a, roughness: 0.9 });
+        const pillarCount = 10;
+        for (let i = 0; i < pillarCount; i++) {
+            const angle = (i / pillarCount) * Math.PI * 2;
+            const px = Math.cos(angle) * 22;
+            const pz = Math.sin(angle) * 22;
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.4, 10, 8), pillarMat);
+            pillar.position.set(px, 5, pz);
+            arenaGroup.add(pillar);
+        }
+        const floorAccent = new THREE.Mesh(new THREE.CylinderGeometry(18, 18, 0.4, 24),
+            new THREE.MeshStandardMaterial({ color: 0x2c4d4c, roughness: 1 }));
+        floorAccent.position.y = 0.05;
+        arenaGroup.add(floorAccent);
+        arenaGroup.position.set(0, 0, WORLD.arenaZ);
+        this.worldGroup.add(arenaGroup);
+        this.arenaCenter = new THREE.Vector3(0, 0, WORLD.arenaZ);
+    }
+
+    // --- Input ---------------------------------------------------------------
+
     bindEvents() {
         document.addEventListener('keydown', e => {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                this.swapCharacter();
-            }
             this.keys[e.key.toLowerCase()] = true;
         });
-        
-        document.addEventListener('mousemove', () => {
-            if (this.controls && this.controls.isLocked && window.gameSystem.state === 'overworld') {
-                window.gameSystem.advanceTutorial('look');
-            }
-        });
-
         document.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         window.addEventListener('resize', () => {
             this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -480,7 +352,13 @@ class Overworld3D {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Mobile Touch Events
+        // Mouse/touch attack input
+        document.addEventListener('mousedown', e => {
+            if (e.button === 0 && (window.gameSystem.state === 'overworld') && window.combatSystem) {
+                window.combatSystem.performPlayerAttack();
+            }
+        });
+
         const bindTouchBtn = (id, key) => {
             const el = document.getElementById(id);
             if (!el) return;
@@ -488,284 +366,281 @@ class Overworld3D {
             el.addEventListener('touchend', (e) => { e.preventDefault(); this.keys[key] = false; });
             el.addEventListener('touchcancel', (e) => { e.preventDefault(); this.keys[key] = false; });
         };
-
         bindTouchBtn('btn-up', 'w');
         bindTouchBtn('btn-down', 's');
         bindTouchBtn('btn-left', 'a');
         bindTouchBtn('btn-right', 'd');
         bindTouchBtn('btn-jump', ' ');
-
         const btnSwap = document.getElementById('btn-swap');
         if (btnSwap) {
-            btnSwap.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.swapCharacter();
-            });
+            btnSwap.addEventListener('touchstart', (e) => { e.preventDefault(); if (window.combatSystem) window.combatSystem.performPlayerAttack(); });
         }
 
-        // Camera Pan (Drag to look)
         const touchZone = document.getElementById('touch-pad-zone');
         if (touchZone) {
-            let lastTouchX = 0;
-            let lastTouchY = 0;
+            let lastTouchX = 0, lastTouchY = 0;
             touchZone.addEventListener('touchstart', (e) => {
-                if(e.touches.length > 0) {
-                    lastTouchX = e.touches[0].clientX;
-                    lastTouchY = e.touches[0].clientY;
-                }
+                if (e.touches.length > 0) { lastTouchX = e.touches[0].clientX; lastTouchY = e.touches[0].clientY; }
             });
             touchZone.addEventListener('touchmove', (e) => {
-                e.preventDefault(); // Prevent scrolling
-                if (window.gameSystem.state !== 'overworld' || !this.isMobile) return;
-                
-                const touchX = e.touches[0].clientX;
-                const touchY = e.touches[0].clientY;
-                const deltaX = touchX - lastTouchX;
-                const deltaY = touchY - lastTouchY;
-                
-                if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-                    window.gameSystem.advanceTutorial('look');
-                }
-                
-                // Sensitivity
+                e.preventDefault();
+                if ((window.gameSystem.state !== 'overworld' && window.gameSystem.state !== 'gauntlet') || !this.isMobile) return;
+                const touchX = e.touches[0].clientX, touchY = e.touches[0].clientY;
+                const deltaX = touchX - lastTouchX, deltaY = touchY - lastTouchY;
                 this.cameraYaw -= deltaX * 0.005;
                 this.cameraPitch -= deltaY * 0.005;
-                
-                // Clamp pitch
                 this.cameraPitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, this.cameraPitch));
-                
-                // Apply rotation
                 this.camera.rotation.order = 'YXZ';
                 this.camera.rotation.y = this.cameraYaw;
                 this.camera.rotation.x = this.cameraPitch;
-                
-                lastTouchX = touchX;
-                lastTouchY = touchY;
+                lastTouchX = touchX; lastTouchY = touchY;
             }, { passive: false });
         }
     }
 
-    swapCharacter() {
-        if (!window.gameSystem || !window.gameSystem.party) return;
-        
-        const pos = this.playerObj.position.clone();
-        this.scene.remove(this.playerObj);
-        
-        this.activePartyIndex = (this.activePartyIndex + 1) % window.gameSystem.party.length;
-        this.playerObj = window.gameSystem.party[this.activePartyIndex].build3D();
-        this.playerObj.position.copy(pos);
-        this.scene.add(this.playerObj);
-        
-        // Show message
-        const charName = window.gameSystem.party[this.activePartyIndex].name;
-        window.gameSystem.showDialogue('System', `Swapped to ${charName}!`);
-    }
+    // --- Movement / traversal -------------------------------------------------
 
-    updatePlayer() {
-        if (!this.playerObj || window.gameSystem.state !== 'overworld') return;
+    updatePlayer(delta) {
+        if (!this.playerObj) return;
+        if (window.gameSystem.state !== 'overworld' && window.gameSystem.state !== 'gauntlet') return;
 
-        const speed = 0.8;
-        
-        // Calculate forward/right vectors based on where the camera is looking
+        const player = window.gameSystem.party[0];
+
         const forward = new THREE.Vector3();
         this.camera.getWorldDirection(forward);
-        forward.y = 0; // Keep movement on the horizontal plane
-        if (forward.lengthSq() < 0.001) {
-            forward.set(0, 0, -1); // Fallback to avoid NaN crash
-        }
+        forward.y = 0;
+        if (forward.lengthSq() < 0.001) forward.set(0, 0, -1);
         forward.normalize();
-        
         const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-        
-        let moved = false;
+
         const oldPos = this.playerObj.position.clone();
 
-        if (this.keys['w'] || this.keys['arrowup']) {
-            this.playerObj.position.addScaledVector(forward, speed);
-            moved = true;
-        }
-        if (this.keys['s'] || this.keys['arrowdown']) {
-            this.playerObj.position.addScaledVector(forward, -speed);
-            moved = true;
-        }
-        if (this.keys['a'] || this.keys['arrowleft']) {
-            this.playerObj.position.addScaledVector(right, -speed);
-            moved = true;
-        }
-        if (this.keys['d'] || this.keys['arrowright']) {
-            this.playerObj.position.addScaledVector(right, speed);
-            moved = true;
-        }
+        if (this.isClimbing) {
+            this.updateClimbing(delta, right);
+        } else {
+            const speed = 0.8;
+            let moved = false;
+            if (this.keys['w'] || this.keys['arrowup']) { this.playerObj.position.addScaledVector(forward, speed); moved = true; }
+            if (this.keys['s'] || this.keys['arrowdown']) { this.playerObj.position.addScaledVector(forward, -speed); moved = true; }
+            if (this.keys['a'] || this.keys['arrowleft']) { this.playerObj.position.addScaledVector(right, -speed); moved = true; }
+            if (this.keys['d'] || this.keys['arrowright']) { this.playerObj.position.addScaledVector(right, speed); moved = true; }
 
-        if (moved) {
-            window.gameSystem.advanceTutorial('move');
-        }
+            if (this.isGliding) {
+                // Horizontal steering handled above already (normal speed); vertical handled below.
+            }
 
-        // Check Collisions
-        if (moved) {
-            // Create a small bounding box for the player
-            const playerBox = new THREE.Box3();
-            playerBox.setFromCenterAndSize(this.playerObj.position, new THREE.Vector3(0.5, 2, 0.5));
-            
-            for (let collider of this.colliders) {
-                if (playerBox.intersectsBox(collider)) {
-                    if (collider.isPipe) {
-                        window.gameSystem.enterBonusLevel();
+            if (moved) {
+                const playerBox = new THREE.Box3();
+                playerBox.setFromCenterAndSize(this.playerObj.position, new THREE.Vector3(0.6, 2, 0.6));
+                for (let collider of this.colliders) {
+                    if (playerBox.intersectsBox(collider)) {
+                        if (collider.isHandWaveTrigger) {
+                            if (!this.handWaveTriggered) {
+                                this.handWaveTriggered = true;
+                                window.gameSystem.triggerHandWaveEvent();
+                            }
+                            break;
+                        }
+                        if (collider.isCoin) {
+                            this.worldGroup.remove(collider.meshGroup);
+                            this.colliders = this.colliders.filter(c => c !== collider);
+                            window.gameSystem.collectCoin();
+                            break;
+                        }
+                        if (collider.climbable && (this.keys['w'] || this.keys['arrowup'])) {
+                            this.enterClimb(collider);
+                            this.playerObj.position.copy(oldPos);
+                            break;
+                        }
+                        this.playerObj.position.x = oldPos.x;
+                        this.playerObj.position.z = oldPos.z;
                         break;
                     }
-                    if (collider.isExitPipe) {
-                        window.gameSystem.exitBonusLevel();
-                        break;
-                    }
-                    if (collider.isCoin) {
-                        // Collect coin
-                        this.worldGroup.remove(collider.meshGroup);
-                        this.colliders = this.colliders.filter(c => c !== collider);
-                        window.gameSystem.collectCoin();
-                        break;
-                    }
-                    if (collider.isBountyBoard) {
-                        window.bountySystem.openBountyBoard();
-                        // Bounce player back so they don't get stuck
-                        this.playerObj.position.x = oldPos.x - forward.x * 2;
-                        this.playerObj.position.z = oldPos.z - forward.z * 2;
-                        break;
-                    }
-                    // Revert horizontal movement but keep vertical (for jumping onto things if needed, though simple block here)
-                    this.playerObj.position.x = oldPos.x;
-                    this.playerObj.position.z = oldPos.z;
-                    break;
                 }
             }
-        }
 
-        // Walk animation
-        if (moved) {
-            const walkTime = Date.now() * 0.015;
-            this.playerObj.rotation.z = Math.sin(walkTime) * 0.15; // Waddle
-        } else {
-            this.playerObj.rotation.z = 0;
-        }
+            this.playerObj.rotation.z = moved ? Math.sin(Date.now() * 0.015) * 0.15 : 0;
 
-        // Jumping Logic
-        if (this.keys[' '] && !this.isJumping) {
-            this.velocityY = 2.5; // Increased jump height
-            this.isJumping = true;
-            window.gameSystem.advanceTutorial('jump');
-        }
+            // Jump / gravity / gliding
+            if (this.keys[' '] && !this.isJumping && this.grounded) {
+                this.velocityY = 2.6;
+                this.isJumping = true;
+                this.grounded = false;
+            }
 
-        // Apply gravity and update Y
-        if (this.isJumping) {
-            this.velocityY -= 0.15; // Gravity
-            this.playerObj.position.y += this.velocityY;
-        }
+            if (this.isJumping) {
+                const wantsGlide = this.keys[' '] && this.velocityY < 0 && player.hasGlider;
+                if (wantsGlide) {
+                    this.isGliding = true;
+                    this.velocityY = -0.35; // slow, controlled descent
+                    // steer while gliding
+                    if (this.keys['a'] || this.keys['arrowleft']) this.playerObj.position.addScaledVector(right, -0.4);
+                    if (this.keys['d'] || this.keys['arrowright']) this.playerObj.position.addScaledVector(right, 0.4);
+                    if (this.keys['w'] || this.keys['arrowup']) this.playerObj.position.addScaledVector(forward, 0.5);
+                } else {
+                    this.isGliding = false;
+                    this.velocityY -= 0.15;
+                }
+                this.playerObj.position.y += this.velocityY;
+            }
 
-        // Floor Collision
-        if (this.playerObj.position.y <= 0) {
-            this.playerObj.position.y = 0;
-            this.velocityY = 0;
-            this.isJumping = false;
-            
-            // Slide animation (hop) ONLY when grounded
-            if (moved) {
-                this.playerObj.position.y = Math.abs(Math.sin(Date.now() * 0.01)) * 1.5;
+            if (this.playerObj.position.y <= 0) {
+                this.playerObj.position.y = 0;
+                this.velocityY = 0;
+                this.isJumping = false;
+                this.isGliding = false;
+                this.grounded = true;
             }
         }
 
-        // Update Camera Position to trail the player in 3rd person
+        // Stamina/MP regen when not climbing
+        if (player) {
+            if (!this.isClimbing) player.stamina = Math.min(player.maxStamina, player.stamina + 15 * delta);
+            player.mp = Math.min(player.maxMp, player.mp + 3 * delta);
+        }
+
+        // Camera follow
         const trailDistance = 20;
         const heightOffset = 6;
-        
-        // The camera's forward direction is determined by PointerLockControls
         const camDir = new THREE.Vector3();
         this.camera.getWorldDirection(camDir);
-        
-        // Place camera behind the player
         this.camera.position.copy(this.playerObj.position);
         this.camera.position.addScaledVector(camDir, -trailDistance);
         this.camera.position.y += heightOffset;
-        
-        // Prevent camera from clipping through the floor
-        if (this.camera.position.y < 1) {
-            this.camera.position.y = 1;
+        if (this.camera.position.y < 1) this.camera.position.y = 1;
+
+        // Smoothly blend fog/sky as the player crosses into the Ruined Ocean
+        const t = THREE.MathUtils.clamp((this.playerObj.position.z - 0) / (WORLD.oceanFogThresholdZ - 0), 0, 1);
+        if (this.scene.fog && this.coastFogColor) {
+            this.scene.fog.color.copy(this.coastFogColor).lerp(this.oceanFogColor, t);
+            this.scene.background.copy(this.coastBgColor).lerp(this.oceanBgColor, t);
         }
 
         this.checkCollisions();
     }
 
+    enterClimb(collider) {
+        this.isClimbing = true;
+        this.isJumping = false;
+        this.velocityY = 0;
+        this.activeClimbCollider = collider;
+    }
+
+    exitClimb() {
+        this.isClimbing = false;
+        this.activeClimbCollider = null;
+    }
+
+    updateClimbing(delta, right) {
+        const player = window.gameSystem.party[0];
+        if (!player || player.stamina <= 0) {
+            this.exitClimb();
+            return;
+        }
+        const climbSpeed = 3.2;
+        if (this.keys['w'] || this.keys['arrowup']) this.playerObj.position.y += climbSpeed * delta;
+        if (this.keys['s'] || this.keys['arrowdown']) this.playerObj.position.y -= climbSpeed * delta;
+        if (this.keys['a'] || this.keys['arrowleft']) this.playerObj.position.addScaledVector(right, -climbSpeed * delta);
+        if (this.keys['d'] || this.keys['arrowright']) this.playerObj.position.addScaledVector(right, climbSpeed * delta);
+
+        player.stamina = Math.max(0, player.stamina - 20 * delta);
+
+        if (this.playerObj.position.y <= 0) {
+            this.playerObj.position.y = 0;
+            this.exitClimb();
+            return;
+        }
+
+        const playerBox = new THREE.Box3();
+        playerBox.setFromCenterAndSize(this.playerObj.position, new THREE.Vector3(0.6, 2, 0.6));
+        if (this.activeClimbCollider && !playerBox.intersectsBox(this.activeClimbCollider)) {
+            // Climbed off the top (or sideways off) the wall - let them stand/fall normally.
+            this.exitClimb();
+            this.isJumping = true;
+            this.velocityY = 0;
+        }
+    }
+
     checkCollisions() {
-        // Distance check for enemies
         for (let i = 0; i < this.entities.length; i++) {
             const ent = this.entities[i];
-            
-            // Use distance from the base
+            if (ent.type !== 'shopkeeper' && ent.type !== 'story_npc') continue; // combat entities are handled by combatSystem
+
             const pPos = new THREE.Vector3(this.playerObj.position.x, 0, this.playerObj.position.z);
             const ePos = new THREE.Vector3(ent.mesh.position.x, 0, ent.mesh.position.z);
-            
             const dist = pPos.distanceTo(ePos);
-            
-            // Boss has a larger hitbox due to scale
-            const hitDist = ent.type === 'boss' ? 6 : 2;
-            const aggroDist = ent.type === 'boss' ? 50 : 35; // Increased aggro radius
-            
-            if (dist < hitDist) { // Hit!
+
+            if (dist < 3) {
                 if (ent.type === 'shopkeeper') {
-                    // Open Shop based on shopType
-                    window.shopSystem.openShop(ent.shopType);
-                    
-                    // Bounce player back so it doesn't instantly retrigger when closing
+                    window.shopSystem.openShop();
                     const camDir = new THREE.Vector3();
                     this.camera.getWorldDirection(camDir);
-                    camDir.y = 0;
-                    camDir.normalize();
+                    camDir.y = 0; camDir.normalize();
                     this.playerObj.position.addScaledVector(camDir, -3);
-                } else {
-                    this.scene.remove(ent.mesh);
-                    this.entities.splice(i, 1);
-                    
-                    if (ent.type === 'enemy') {
-                        window.gameSystem.triggerEncounter(false, ent.data);
-                    } else if (ent.type === 'boss') {
-                        window.gameSystem.triggerEncounter(true, ent.data);
+                } else if (ent.type === 'story_npc') {
+                    window.gameSystem.triggerStoryNPC(ent.storyId);
+                    if (ent.oneTime) {
+                        this.scene.remove(ent.mesh);
+                        this.entities.splice(i, 1);
+                    } else {
+                        const camDir = new THREE.Vector3();
+                        this.camera.getWorldDirection(camDir);
+                        camDir.y = 0; camDir.normalize();
+                        this.playerObj.position.addScaledVector(camDir, -3);
                     }
                 }
                 break;
-            } else if (ent.type !== 'shopkeeper' && dist < aggroDist) {
-                // Aggro! Move towards player faster
-                const speed = ent.type === 'boss' ? 0.6 : 0.3;
-                const dir = new THREE.Vector3().subVectors(pPos, ePos).normalize();
-                ent.mesh.position.addScaledVector(dir, speed);
-                
-                // Aggro run animation (wobble fast)
-                if (ent.mesh.children.length > 1) { // assuming index 1 is pivot
-                    const time = Date.now() * 0.03;
-                    ent.mesh.children[1].rotation.z = Math.sin(time) * 0.3; 
-                }
-            } else {
-                // Idle animation (reset rotation)
-                if (ent.mesh.children.length > 1) {
-                    ent.mesh.children[1].rotation.z = 0;
-                }
             }
         }
     }
 
+    spawnCompanion(charData) {
+        if (this.companionObj) this.scene.remove(this.companionObj);
+        this.companionObj = charData.build3D();
+        this.companionObj.position.copy(this.playerObj.position);
+        this.companionObj.position.x -= 3;
+        this.scene.add(this.companionObj);
+    }
+
+    updateCompanion(delta) {
+        if (!this.companionObj || !this.playerObj) return;
+        const behind = new THREE.Vector3();
+        this.camera.getWorldDirection(behind);
+        behind.y = 0; behind.normalize();
+        const targetPos = this.playerObj.position.clone().addScaledVector(behind, -4);
+        targetPos.x += 2;
+        this.companionObj.position.lerp(targetPos, Math.min(1, delta * 3));
+    }
+
+    // --- Oblongtalo's Arena entry (called after the hand-wave cutscene) ------
+
+    spawnOblongtalo() {
+        const ghost = BOSSES.oblongtalo_ghost.build3D();
+        const s = BOSSES.oblongtalo_ghost.scale || 1;
+        ghost.scale.set(s, s, s);
+        ghost.position.set(this.arenaCenter.x, 0, this.arenaCenter.z - 15);
+        this.scene.add(ghost);
+        this.oblongtaloMesh = ghost;
+        this.playerObj.position.set(this.arenaCenter.x, 0, this.arenaCenter.z + 15);
+        return ghost;
+    }
+
+    // --- Main loop -------------------------------------------------------------
+
     animate() {
         requestAnimationFrame(() => this.animate());
+        const now = performance.now();
+        const delta = Math.min(0.05, (now - this.lastFrameTime) / 1000);
+        this.lastFrameTime = now;
 
         if (window.gameSystem.isCutscene) {
             if (this.cutsceneProgress !== undefined) {
-                this.cutsceneProgress += 0.005; // Adjust for fly-in speed
-                
-                // Target camera position (behind player)
+                this.cutsceneProgress += 0.005;
                 const targetPos = this.playerObj.position.clone();
                 targetPos.z += 20;
                 targetPos.y += 6;
-                
-                // Lerp towards target position and look at player
                 this.camera.position.lerp(targetPos, 0.03);
                 this.camera.lookAt(this.playerObj.position);
-                
                 if (this.cutsceneProgress >= 1.0) {
                     this.cutsceneProgress = undefined;
                     if (this.cutsceneCallback) {
@@ -775,21 +650,17 @@ class Overworld3D {
                     }
                 }
             }
-        } else if (window.gameSystem.state === 'overworld') {
-            this.updatePlayer();
-            
-            // Update Billboards
+            this.renderer.render(this.scene, this.camera);
+        } else if (window.gameSystem.state === 'overworld' || window.gameSystem.state === 'gauntlet') {
+            this.updatePlayer(delta);
+            this.updateCompanion(delta);
+            if (window.combatSystem) window.combatSystem.update(delta);
+
             const time = Date.now() * 0.002;
             this.scene.traverse((object) => {
-                if (object.name === "billboard") {
-                    const targetPos = new THREE.Vector3(this.camera.position.x, object.position.y, this.camera.position.z);
-                    object.lookAt(targetPos);
-                    
-                    if (object.parent && object.parent.userData && object.parent.userData.baseY !== undefined) {
-                        const data = object.parent.userData;
-                        // Bobbing effect
-                        object.position.y = Math.sin(time * 2 + data.randomOffset) * 0.5;
-                    }
+                if (object === this.playerObj) return; // player's Y is fully owned by gravity/climb/glide logic
+                if (object.userData && object.userData.baseY !== undefined) {
+                    object.position.y = object.userData.baseY + Math.sin(time * 2 + object.userData.timeOffset) * 0.15;
                 }
             });
 
@@ -797,60 +668,15 @@ class Overworld3D {
         }
     }
 
-    hide() {
-        // DO NOT set display none! Combat needs the same canvas!
-    }
-
-    show() {
-        // Container remains visible always.
-    }
-
-    spawnHoloGoomba() {
-        const holoGoomba = ENEMIES.goomba.build3D();
-        
-        // Calculate position 15 units in front of the player
-        const forward = new THREE.Vector3(0, 0, -1);
-        if (this.playerObj) {
-            const playerPos = this.playerObj.position.clone();
-            holoGoomba.position.set(playerPos.x, 1, playerPos.z - 15);
-        } else {
-            holoGoomba.position.set(0, 1, -15);
-        }
-        
-        // Make it holographic (cyan wireframe)
-        holoGoomba.traverse((child) => {
-            if (child.isMesh) {
-                child.material = new THREE.MeshBasicMaterial({
-                    color: 0x00ffff,
-                    transparent: true,
-                    opacity: 0.6,
-                    wireframe: true
-                });
-            }
-        });
-
-        this.scene.add(holoGoomba);
-        
-        const data = JSON.parse(JSON.stringify(ENEMIES.goomba));
-        data.name = 'Holo-Goomba';
-        
-        this.entities.push({ 
-            type: 'enemy', 
-            mesh: holoGoomba,
-            data: data
-        });
-    }
+    hide() {}
+    show() {}
 
     startCinematicFlyin(onComplete) {
-        if (this.controls && this.controls.isLocked) {
-            this.controls.unlock();
-        }
+        if (this.controls && this.controls.isLocked) this.controls.unlock();
         this.cutsceneProgress = 0;
         this.cutsceneCallback = onComplete;
-        
-        // Start camera high up in the sky, looking down
-        this.camera.position.set(0, 50, 50);
-        this.camera.lookAt(0, 0, 0);
+        this.camera.position.set(this.playerObj.position.x, 50, this.playerObj.position.z + 50);
+        this.camera.lookAt(this.playerObj.position);
     }
 }
 

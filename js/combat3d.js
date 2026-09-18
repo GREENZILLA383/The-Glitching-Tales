@@ -1,719 +1,394 @@
-class Combat3D {
+// Real-time action combat. No turn menus - the player attacks directly in the open
+// world, enemies act on their own timers, and Oblongtalo's fight is a dedicated
+// two-phase dodge gauntlet (see runOblongtaloGauntlet).
+
+const SKILL_MATCH_MULTIPLIER = 1.5;
+const MELEE_RANGE = 4.5;
+const PROJECTILE_RANGE = 40;
+const PROJECTILE_SPEED = 26;
+const ATTACK_COOLDOWN = 0.5;
+const PLAYER_HIT_INVINCIBILITY = 1.0;
+
+class CombatSystem {
     constructor() {
-        this.scene = new THREE.Scene();
-        
-        // Setup Skybox for combat (different reflection or tone)
-        const textureLoader = new THREE.TextureLoader();
-        const skyTexture = textureLoader.load(ASSETS.mario_world_bg_1783460841676);
-        skyTexture.mapping = THREE.EquirectangularReflectionMapping;
-        this.scene.background = skyTexture;
-        this.scene.environment = skyTexture;
-        // Darken the skybox slightly for combat focus
-        this.scene.backgroundIntensity = 0.5;
-
-        // Setup Camera
-        this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-        this.camera.position.set(0, 20, 40);
-        this.camera.lookAt(0, 0, 0);
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(10, 30, 10);
-        dirLight.castShadow = true;
-        this.scene.add(dirLight);
-
-        // Grand Colosseum Floor
-        const floorGeo = new THREE.CylinderGeometry(25, 25, 2, 32);
-        const floorMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
-        floor.position.y = -1;
-        floor.receiveShadow = true;
-        this.scene.add(floor);
-
-        // Colosseum Walls (Low outer ring)
-        const wallGeo = new THREE.TorusGeometry(25, 1, 16, 64);
-        const wallMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8 });
-        const wall = new THREE.Mesh(wallGeo, wallMat);
-        wall.rotation.x = Math.PI / 2;
-        wall.position.y = 0;
-        this.scene.add(wall);
-
-        this.party = [];
-        this.enemies = [];
-        this.turnOrder = [];
-        this.currentTurnIndex = 0;
-        
-        // UI Elements
-        this.uiLayer = document.getElementById('combat-ui-layer');
-        this.partyStatus = document.getElementById('party-status');
-        this.actionMenu = document.getElementById('action-menu');
-        this.messageBox = document.getElementById('combat-message');
-        this.bossHealthContainer = document.getElementById('boss-health-container');
-        this.bossHealthFill = document.getElementById('boss-health-fill');
-        this.bossNameText = document.getElementById('boss-name');
+        this.projectiles = []; // {mesh, dir, traveled, skillType, power}
+        this.gauntlet = null;  // active Oblongtalo gauntlet state, or null
+        this.attackCooldownUntil = 0;
     }
 
-    startCombat(party, enemies, isBoss = false, worldName = 'mario') {
-        this.isBossFight = isBoss;
-        this.totalXpEarned = 0; // Initialize XP for this encounter
-        
-        // Update Combat Skybox based on world
-        let skyAsset = ASSETS.mario_world_bg_1783460841676;
-        if (worldName === 'minecraft') {
-            skyAsset = ASSETS.minecraft_village_bg_1783475064320;
-        } else if (worldName === 'amongus') {
-            skyAsset = ASSETS.amongus_combat_bg;
-        } else if (worldName === 'pokemon') {
-            skyAsset = ASSETS.pokemon_combat_bg;
-        } else if (worldName === 'animation') {
-            skyAsset = ASSETS.animation_dimension_bg;
-        }
-        
-        if (skyAsset) {
-            const textureLoader = new THREE.TextureLoader();
-            const skyTexture = textureLoader.load(skyAsset);
-            skyTexture.mapping = THREE.EquirectangularReflectionMapping;
-            this.scene.background = skyTexture;
-            this.scene.environment = skyTexture;
-        } else {
-            this.scene.environment = null; // Fallback
-        }
-        
-        // Add Combat Fog for atmosphere
-        let fogColor = 0x1e293b;
-        if (worldName === 'minecraft') fogColor = 0x27272a;
-        if (worldName === 'pokemon') fogColor = 0x1e3a8a;
-        if (worldName === 'amongus') fogColor = 0x000000;
-        if (worldName === 'animation') fogColor = 0x0ea5e9;
-        this.scene.fog = new THREE.Fog(fogColor, 40, 150); // Pushed back so characters don't look black
-        
-        // Clone state
-        this.party = party.map(p => ({ ...p, isPlayer: true }));
-        this.enemies = enemies.map(e => ({ ...e, isPlayer: false }));
-        
-        this.uiLayer.classList.remove('hidden');
-        
-        if (this.isBossFight) {
-            const boss = this.enemies.find(e => e.isBoss);
-            if (boss) {
-                this.bossHealthContainer.classList.remove('hidden');
-                this.bossNameText.innerText = boss.name;
-                this.bossHealthFill.style.width = '100%';
+    // --- Player attacking ------------------------------------------------
+
+    performPlayerAttack() {
+        const player = window.gameSystem.party[0];
+        if (!player || player.hp <= 0) return;
+        if (window.gameSystem.state !== 'overworld') return;
+        const now = performance.now() / 1000;
+        if (now < this.attackCooldownUntil) return;
+        this.attackCooldownUntil = now + ATTACK_COOLDOWN;
+
+        const weapon = player.equippedWeapon;
+        if (!weapon) return;
+
+        if (weapon.mpCost) {
+            if (player.mp < weapon.mpCost) {
+                window.gameSystem.showDialogue('System', 'Not enough MP!');
+                this.attackCooldownUntil = now; // don't waste the cooldown on a failed cast
+                return;
             }
-        } else {
-            this.bossHealthContainer.classList.add('hidden');
+            player.mp -= weapon.mpCost;
         }
 
-        this.spawnCombatants();
-        this.renderStatus();
-        this.calculateTurnOrder();
-        
-        this.active = true;
-        this.processTurn();
-        this.animate();
-    }
-
-    animate() {
-        if (!this.active) return;
-        requestAnimationFrame(() => this.animate());
-        this.render();
-    }
-
-    spawnCombatants() {
-        // Clear old meshes
-        this.party.forEach(p => { if(p.mesh) this.scene.remove(p.mesh); });
-        this.enemies.forEach(e => { if(e.mesh) this.scene.remove(e.mesh); });
-
-        // Spawn Party on the left arc
-        this.party.forEach((hero, index) => {
-            const mesh = hero.build3D();
-            mesh.position.set(-15, 0, -10 + index * 10);
-            this.scene.add(mesh);
-            hero.mesh = mesh;
-            hero.originalPos = mesh.position.clone();
-        });
-
-        // Spawn Enemies on the right arc
-        this.enemies.forEach((enemy, index) => {
-            const mesh = enemy.build3D();
-            
-            // Bosses are bigger
-            if (enemy.isBoss) {
-                mesh.scale.set(3, 3, 3);
+        if (weapon.durability !== null && weapon.durability !== undefined) {
+            weapon.durability -= 1;
+            if (weapon.durability <= 0) {
+                window.gameSystem.showDialogue('System', `Your ${weapon.name} broke!`);
+                player.equippedWeapon = player.defaultWeapon;
             }
-            
-            mesh.position.set(15, 0, -10 + index * 10);
-            this.scene.add(mesh);
-            enemy.mesh = mesh;
-            enemy.originalPos = mesh.position.clone();
-        });
-    }
-
-    renderStatus() {
-        this.partyStatus.innerHTML = '';
-        this.party.forEach((hero, index) => {
-            const hpPercent = (hero.hp / hero.maxHp) * 100;
-            const mpPercent = (hero.mp / hero.maxMp) * 100;
-            
-            const el = document.createElement('div');
-            el.className = 'status-row';
-            el.id = `status-hero-${index}`;
-            el.innerHTML = `
-                <div class="char-name">${hero.name}</div>
-                <div class="stats-bars">
-                    <div class="bar-container">
-                        <div class="bar-fill hp" style="width: ${hpPercent}%"></div>
-                        <div class="bar-text">${hero.hp}/${hero.maxHp}</div>
-                    </div>
-                    <div class="bar-container">
-                        <div class="bar-fill mp" style="width: ${mpPercent}%"></div>
-                        <div class="bar-text">${hero.mp}/${hero.maxMp}</div>
-                    </div>
-                </div>
-            `;
-            this.partyStatus.appendChild(el);
-        });
-    }
-
-    calculateTurnOrder() {
-        const allCombatants = [...this.party, ...this.enemies];
-        this.turnOrder = allCombatants.sort((a, b) => b.speed - a.speed);
-        this.currentTurnIndex = 0;
-    }
-
-    processTurn() {
-        if (!this.active) return;
-
-        const aliveHeroes = this.party.filter(h => h.hp > 0);
-        const aliveEnemies = this.enemies.filter(e => e.hp > 0);
-        
-        if (aliveHeroes.length === 0) return this.endCombat(false);
-        if (aliveEnemies.length === 0) return this.endCombat(true);
-
-        const currentCombatant = this.turnOrder[this.currentTurnIndex];
-        
-        if (currentCombatant.hp <= 0) {
-            this.nextTurn();
-            return;
         }
 
-        // Clear status effects on start of turn
-        if (currentCombatant.status === 'invincible') {
-            currentCombatant.status = null;
-        }
+        const forward = new THREE.Vector3();
+        overworld3d.camera.getWorldDirection(forward);
+        forward.y = 0; forward.normalize();
 
-        this.highlightActive(currentCombatant);
-
-        if (currentCombatant.isPlayer) {
-            this.showPlayerMenu(currentCombatant);
+        if (weapon.playStyle === 'range' || weapon.playStyle === 'magick') {
+            this.spawnProjectile(overworld3d.playerObj.position.clone().add(new THREE.Vector3(0, 2, 0)), forward, weapon);
         } else {
-            this.takeEnemyTurn(currentCombatant);
+            this.meleeSwing(forward, weapon);
+        }
+        window.gameSystem.updateHUD();
+    }
+
+    meleeSwing(forward, weapon) {
+        const playerPos = overworld3d.playerObj.position;
+        const target = this.findNearestTargetInCone(playerPos, forward, MELEE_RANGE, Math.PI / 2.5);
+        if (target) {
+            const power = this.computePower(weapon, target.ent);
+            this.damageEntity(target.ent, power);
         }
     }
 
-    highlightActive(combatant) {
-        document.querySelectorAll('.status-row').forEach(el => el.classList.remove('active'));
-        if (combatant.isPlayer) {
-            const index = this.party.indexOf(combatant);
-            document.getElementById(`status-hero-${index}`).classList.add('active');
+    spawnProjectile(origin, dir, weapon) {
+        const geo = new THREE.SphereGeometry(0.4, 8, 8);
+        const color = weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066;
+        const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(origin);
+        overworld3d.scene.add(mesh);
+        this.projectiles.push({ mesh, dir: dir.clone(), traveled: 0, weapon });
+    }
+
+    findNearestTargetInCone(fromPos, forward, range, halfAngle) {
+        let best = null, bestDist = Infinity;
+        for (const ent of overworld3d.entities) {
+            if (ent.type !== 'enemy' && ent.type !== 'boss') continue;
+            if (ent.data.hp <= 0) continue;
+            const toEnt = new THREE.Vector3(ent.mesh.position.x - fromPos.x, 0, ent.mesh.position.z - fromPos.z);
+            const dist = toEnt.length();
+            if (dist > range) continue;
+            toEnt.normalize();
+            const angle = Math.acos(THREE.MathUtils.clamp(forward.dot(toEnt), -1, 1));
+            if (angle > halfAngle) continue;
+            if (dist < bestDist) { bestDist = dist; best = { ent, dist }; }
         }
-        
-        // Bounce animation for active character
-        const jump = () => {
-            if(!this.active || this.turnOrder[this.currentTurnIndex] !== combatant) return;
-            combatant.mesh.position.y = 2;
-            setTimeout(() => {
-                if(combatant.mesh) combatant.mesh.position.y = 0;
-            }, 300);
-            setTimeout(jump, 1200);
+        return best;
+    }
+
+    findNearestTargetInRadius(fromPos, radius) {
+        let best = null, bestDist = Infinity;
+        for (const ent of overworld3d.entities) {
+            if (ent.type !== 'enemy' && ent.type !== 'boss') continue;
+            if (ent.data.hp <= 0) continue;
+            const dist = fromPos.distanceTo(new THREE.Vector3(ent.mesh.position.x, 0, ent.mesh.position.z));
+            if (dist < radius && dist < bestDist) { bestDist = dist; best = ent; }
+        }
+        return best;
+    }
+
+    computePower(weapon, targetEnt) {
+        let power = weapon.power || 10;
+        if (weapon.skillType && weapon.skillType === window.gameSystem.party[0].skillType) {
+            power *= SKILL_MATCH_MULTIPLIER;
+        }
+        return power;
+    }
+
+    damageEntity(ent, amount) {
+        ent.data.hp = Math.max(0, ent.data.hp - amount);
+        this.flashHit(ent.mesh);
+        if (ent.data.hp <= 0) {
+            this.killEntity(ent);
+        }
+    }
+
+    flashHit(mesh) {
+        mesh.traverse(c => {
+            if (c.isMesh && c.material && c.material.emissive) {
+                const orig = c.material.emissive.getHex();
+                c.material.emissive.setHex(0xff3333);
+                setTimeout(() => { if (c.material) c.material.emissive.setHex(orig); }, 120);
+            }
+        });
+    }
+
+    killEntity(ent) {
+        overworld3d.scene.remove(ent.mesh);
+        const idx = overworld3d.entities.indexOf(ent);
+        if (idx >= 0) overworld3d.entities.splice(idx, 1);
+
+        const player = window.gameSystem.party[0];
+        player.exp += ent.data.xpReward || 0;
+        while (player.exp >= player.expToNext) {
+            player.exp -= player.expToNext;
+            player.level += 1;
+            player.expToNext = Math.round(player.expToNext * 1.3);
+            player.maxHp += 10;
+            player.hp = player.maxHp;
+            window.gameSystem.showDialogue('System', `Level up! You are now level ${player.level}.`);
+        }
+
+        if (ent.type === 'boss' && ent.bossId === 'croton') {
+            window.gameSystem.onCrotonDefeated();
+        }
+        window.gameSystem.updateHUD();
+    }
+
+    // --- Player taking damage --------------------------------------------
+
+    damagePlayer(amount) {
+        const player = window.gameSystem.party[0];
+        const now = performance.now() / 1000;
+        if (now < (player.invincibleUntil || 0)) return;
+        player.invincibleUntil = now + PLAYER_HIT_INVINCIBILITY;
+        player.hp = Math.max(0, player.hp - amount);
+        window.gameSystem.updateHUD();
+        if (player.hp <= 0) {
+            window.gameSystem.onPlayerDefeated();
+        }
+    }
+
+    // --- Per-frame update --------------------------------------------------
+
+    update(delta) {
+        this.updateProjectiles(delta);
+        if (window.gameSystem.state === 'overworld') {
+            this.updateEnemyAI(delta);
+        }
+        if (this.gauntlet && window.gameSystem.state === 'gauntlet') {
+            this.updateGauntlet(delta);
+        }
+        this.updateBossHUD();
+    }
+
+    updateBossHUD() {
+        const container = document.getElementById('boss-health-container');
+        if (!container) return;
+        const croton = overworld3d.entities.find(e => e.bossId === 'croton');
+        if (!croton) { container.classList.add('hidden'); return; }
+        const playerPos = overworld3d.playerObj ? overworld3d.playerObj.position : null;
+        const dist = playerPos ? playerPos.distanceTo(croton.mesh.position) : Infinity;
+        if (dist > 60) { container.classList.add('hidden'); return; }
+        container.classList.remove('hidden');
+        const fill = document.getElementById('boss-health-fill');
+        if (fill) fill.style.width = `${Math.max(0, (croton.data.hp / croton.data.maxHp) * 100)}%`;
+    }
+
+    updateProjectiles(delta) {
+        for (let i = this.projectiles.length - 1; i >= 0; i--) {
+            const p = this.projectiles[i];
+            const step = PROJECTILE_SPEED * delta;
+            p.mesh.position.addScaledVector(p.dir, step);
+            p.traveled += step;
+
+            const hitEnt = this.findNearestTargetInRadius(p.mesh.position, 1.5);
+            if (hitEnt) {
+                this.damageEntity(hitEnt, this.computePower(p.weapon, hitEnt));
+                if (p.weapon.playStyle === 'magick' && hitEnt.data.hp > 0) {
+                    const base = 1, boosted = 2;
+                    const matched = p.weapon.skillType === window.gameSystem.party[0].skillType;
+                    hitEnt.aiState = hitEnt.aiState || {};
+                    hitEnt.aiState.slowedUntil = (performance.now() / 1000) + (matched ? boosted : base);
+                }
+                overworld3d.scene.remove(p.mesh);
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+            if (p.traveled > PROJECTILE_RANGE) {
+                overworld3d.scene.remove(p.mesh);
+                this.projectiles.splice(i, 1);
+            }
+        }
+    }
+
+    updateEnemyAI(delta) {
+        const player = window.gameSystem.party[0];
+        if (!player || player.hp <= 0 || !overworld3d.playerObj) return;
+        const playerPos = new THREE.Vector3(overworld3d.playerObj.position.x, 0, overworld3d.playerObj.position.z);
+
+        for (const ent of overworld3d.entities) {
+            if (ent.type !== 'enemy' && ent.type !== 'boss') continue;
+            const isCroton = ent.bossId === 'croton';
+            const entPos = new THREE.Vector3(ent.mesh.position.x, 0, ent.mesh.position.z);
+            const dist = playerPos.distanceTo(entPos);
+            const now = performance.now() / 1000;
+            const slowed = ent.aiState && ent.aiState.slowedUntil && now < ent.aiState.slowedUntil;
+
+            const aggroDist = isCroton ? 45 : 22;
+            const meleeRange = isCroton ? 6 : 2.5;
+
+            if (dist < aggroDist && !slowed) {
+                const speed = (isCroton ? 3 : ent.data.speed || 3) * delta;
+                if (dist > meleeRange) {
+                    const dir = new THREE.Vector3().subVectors(playerPos, entPos).normalize();
+                    ent.mesh.position.addScaledVector(dir, speed);
+                }
+            }
+
+            ent.aiState.cooldown = (ent.aiState.cooldown || 0) - delta;
+            if (ent.aiState.cooldown > 0) continue;
+
+            if (isCroton) {
+                if (dist < meleeRange) {
+                    this.damagePlayer(ent.data.attack * 0.8);
+                    ent.aiState.cooldown = 2.2;
+                } else if (dist < 16) {
+                    // Wave Summon - AoE push/damage
+                    this.damagePlayer(ent.data.attack * 0.6);
+                    ent.aiState.cooldown = 3.4;
+                }
+            } else if (dist < meleeRange) {
+                this.damagePlayer(ent.data.attack * 0.6);
+                ent.aiState.cooldown = 1.6;
+            }
+        }
+    }
+
+    // --- Oblongtalo's survival gauntlet -------------------------------------
+
+    startOblongtaloGauntlet() {
+        const cfg = BOSSES.oblongtalo_ghost.gauntlet;
+        this.gauntlet = {
+            cfg,
+            phase: 1,
+            waveIndex: 0,
+            chargeIndex: 0,
+            state: 'waiting',
+            timer: 1.0,
+            activeCharges: [],
+            arenaCenter: overworld3d.arenaCenter.clone(),
+            arenaRadius: 20
         };
-        jump();
+        window.gameSystem.state = 'gauntlet';
+        overworld3d.spawnOblongtalo();
+        window.gameSystem.showDialogue('Oblongtalo', "Let's see if you're strong enough to survive what my kingdom could not.");
     }
 
-    showPlayerMenu(hero) {
-        this.actionMenu.innerHTML = `
-            <button class="action-btn" id="btn-attack">Attack</button>
-            <button class="action-btn" id="btn-ability">Abilities</button>
-            <button class="action-btn" id="btn-defend">Defend</button>
-        `;
+    updateGauntlet(delta) {
+        const g = this.gauntlet;
+        if (!g) return;
+        const player = window.gameSystem.party[0];
 
-        const isTutorial = this.enemies[0] && this.enemies[0].id === 'hologoomba';
-        
-        if (isTutorial) {
-            if (!this.combatTutorialStep) this.combatTutorialStep = 1;
-            
-            if (this.combatTutorialStep === 1) {
-                this.showMessage("Welcome to Combat! Click 'Attack' to strike the Hologoomba!", 0);
-                document.getElementById('btn-ability').disabled = true;
-                document.getElementById('btn-defend').disabled = true;
-            } else if (this.combatTutorialStep === 2) {
-                this.showMessage("Great job! Now click 'Abilities' to try a special move!", 0);
-                document.getElementById('btn-attack').disabled = true;
-                document.getElementById('btn-defend').disabled = true;
+        // Keep the player roughly inside the arena.
+        if (overworld3d.playerObj) {
+            const p = overworld3d.playerObj.position;
+            const toCenter = new THREE.Vector3(p.x - g.arenaCenter.x, 0, p.z - g.arenaCenter.z);
+            if (toCenter.length() > g.arenaRadius) {
+                toCenter.setLength(g.arenaRadius);
+                p.x = g.arenaCenter.x + toCenter.x;
+                p.z = g.arenaCenter.z + toCenter.z;
+            }
+        }
+
+        g.timer -= delta;
+        if (g.state === 'waiting') {
+            if (g.timer <= 0) this.spawnGauntletWave();
+        } else if (g.state === 'charging') {
+            this.advanceCharges(delta);
+        }
+    }
+
+    spawnGauntletWave() {
+        const g = this.gauntlet;
+        const cfg = g.cfg;
+        const horizontal = Math.random() > 0.5;
+        const count = g.phase === 1 ? 2 : 1;
+        g.activeCharges = [];
+
+        for (let i = 0; i < count; i++) {
+            const parts = g.phase === 1 ? buildChargeGhostParts() : buildOblongtaloGhostParts();
+            const mesh = VoxelBuilder.buildCharacter(parts);
+            const offset = horizontal ? (i - (count - 1) / 2) * 6 : 0;
+            let startPos, dir;
+            const R = g.arenaRadius + 5;
+            if (horizontal) {
+                startPos = new THREE.Vector3(g.arenaCenter.x - R, 0, g.arenaCenter.z + offset);
+                dir = new THREE.Vector3(1, 0, 0);
             } else {
-                this.showMessage("Defeat the Hologoomba to finish the tutorial!", 0);
+                startPos = new THREE.Vector3(g.arenaCenter.x + offset, 0, g.arenaCenter.z - R);
+                dir = new THREE.Vector3(0, 0, 1);
             }
-        }
-
-        document.getElementById('btn-attack').onclick = () => {
-            if (isTutorial && this.combatTutorialStep === 1) this.combatTutorialStep = 2;
-            const aliveEnemies = this.enemies.filter(e => e.hp > 0);
-            const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-            this.executeAttack(hero, target);
-        };
-        
-        document.getElementById('btn-ability').onclick = () => {
-            if (isTutorial && this.combatTutorialStep === 2) this.combatTutorialStep = 3;
-            this.showAbilityMenu(hero);
-        };
-        
-        document.getElementById('btn-defend').onclick = () => {
-            this.showMessage(`${hero.name} defends!`);
-            hero.isDefending = true;
-            setTimeout(() => this.nextTurn(), 1000);
-        };
-    }
-
-    showAbilityMenu(hero) {
-        this.actionMenu.innerHTML = '';
-        
-        const grid = document.createElement('div');
-        grid.className = 'ability-grid';
-        this.actionMenu.appendChild(grid);
-        
-        if (hero.abilities) {
-            hero.abilities.forEach(ability => {
-                const btn = document.createElement('div');
-                
-                let themeClass = 'theme-default';
-                if (ability.name.includes('Fireball') || ability.name.includes('Charizard')) themeClass = 'theme-fire';
-                else if (ability.name.includes('Sword')) themeClass = 'theme-diamond';
-                else if (ability.name === 'BLJ' || ability.name === 'Frame Perfect') themeClass = 'theme-speed';
-                else if (ability.type === 'heal' || ability.type === 'buff' || ability.name === 'Eat Steak') themeClass = 'theme-heal';
-                else if (ability.name.includes('Draw Weapon') || ability.name.includes('Hollow')) themeClass = 'theme-stickman';
-                
-                btn.className = `ability-card ${themeClass}`;
-                if (hero.mp < ability.cost) {
-                    btn.classList.add('disabled');
-                }
-                
-                btn.innerHTML = `
-                    <div class="ability-title">${ability.name}</div>
-                    <div class="ability-desc">${ability.description || 'Deals damage to an enemy.'}</div>
-                    <div class="ability-cost">Cost: ${ability.cost} MP</div>
-                `;
-                
-                btn.onclick = () => {
-                    if (hero.mp >= ability.cost) {
-                        this.useAbility(hero, ability);
-                    } else {
-                        this.showMessage("Not enough MP!");
-                    }
-                };
-                grid.appendChild(btn);
+            mesh.position.copy(startPos);
+            overworld3d.scene.add(mesh);
+            g.activeCharges.push({
+                mesh, dir,
+                speed: g.phase === 1 ? cfg.phase1GhostSpeed : cfg.phase2ChargeSpeed,
+                hitRadius: g.phase === 1 ? 2.2 : 4
             });
         }
 
-        const backBtn = document.createElement('button');
-        backBtn.className = 'action-btn back-btn';
-        backBtn.innerText = 'Back';
-        backBtn.onclick = () => this.showPlayerMenu(hero);
-        this.actionMenu.appendChild(backBtn);
+        g.state = 'charging';
+        window.gameSystem.updateHUD();
     }
 
-    useAbility(hero, ability) {
-        this.actionMenu.innerHTML = '';
-        hero.mp -= ability.cost;
-        this.renderStatus();
-        this.showMessage(`${hero.name} uses ${ability.name}!`);
-        
-        if (ability.type === 'heal') {
-            setTimeout(() => {
-                hero.hp = Math.min(hero.maxHp, hero.hp + ability.power);
-                this.showDamage(`+${ability.power}`, hero); // we'll update showDamage to take position or hero later
-                this.renderStatus();
-                setTimeout(() => this.nextTurn(), 1000);
-            }, 1000);
-        } else if (ability.type === 'buff') {
-            setTimeout(() => {
-                hero[ability.stat] += ability.amount;
-                this.showMessage(`${hero.name}'s ${ability.stat} rose!`);
-                setTimeout(() => this.nextTurn(), 1000);
-            }, 1000);
-        } else if (ability.type === 'debuff') {
-            setTimeout(() => {
-                const aliveEnemies = this.enemies.filter(e => e.hp > 0);
-                const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-                target[ability.stat] = Math.max(1, target[ability.stat] - ability.amount);
-                this.showMessage(`${target.name}'s ${ability.stat} fell!`);
-                setTimeout(() => this.nextTurn(), 1000);
-            }, 1000);
-        } else if (ability.type === 'status') {
-            setTimeout(() => {
-                hero.status = ability.status;
-                this.showMessage(`${hero.name} used ${ability.name}!`);
-                setTimeout(() => this.nextTurn(), 1000);
-            }, 1000);
-        } else {
-            setTimeout(() => {
-                const aliveEnemies = this.enemies.filter(e => e.hp > 0);
-                if (ability.target === 'all') {
-                    this.executeAoEAttack(hero, aliveEnemies, ability);
-                } else {
-                    const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-                    this.executeAttack(hero, target, ability);
+    advanceCharges(delta) {
+        const g = this.gauntlet;
+        const cfg = g.cfg;
+        let anyStillActive = false;
+        const playerPos = overworld3d.playerObj ? new THREE.Vector3(overworld3d.playerObj.position.x, 0, overworld3d.playerObj.position.z) : null;
+
+        for (const charge of g.activeCharges) {
+            charge.mesh.position.addScaledVector(charge.dir, charge.speed * delta);
+            const distFromCenter = charge.mesh.position.distanceTo(g.arenaCenter);
+            if (distFromCenter < g.arenaRadius + 8) anyStillActive = true; else continue;
+
+            if (playerPos) {
+                const d = new THREE.Vector3(charge.mesh.position.x, 0, charge.mesh.position.z).distanceTo(playerPos);
+                if (d < charge.hitRadius) {
+                    this.damagePlayer(cfg.hitDamage);
                 }
-            }, 500);
-        }
-    }
-
-    takeEnemyTurn(enemy) {
-        this.actionMenu.innerHTML = '';
-        const isTutorial = this.enemies[0] && this.enemies[0].id === 'hologoomba';
-        
-        if (isTutorial) {
-            this.showMessage(`The Hologoomba strikes back! Notice how you take damage!`);
-        } else {
-            this.showMessage(`${enemy.name}'s turn...`);
-        }
-        
-        setTimeout(() => {
-            const aliveHeroes = this.party.filter(h => h.hp > 0);
-            const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-            this.executeAttack(enemy, target);
-        }, 1500);
-    }
-
-    shakeScreen(intensity) {
-        let shakes = 0;
-        const originalCamPos = this.camera.position.clone();
-        
-        const shakeAnim = setInterval(() => {
-            shakes++;
-            this.camera.position.x = originalCamPos.x + (Math.random() - 0.5) * intensity;
-            this.camera.position.y = originalCamPos.y + (Math.random() - 0.5) * intensity;
-            if (shakes > 10) {
-                clearInterval(shakeAnim);
-                this.camera.position.copy(originalCamPos);
             }
-        }, 16);
-    }
-
-    executeAttack(attacker, target, ability = null) {
-        this.actionMenu.innerHTML = '';
-        if (!ability) {
-            this.showMessage(`${attacker.name} attacks ${target.name}!`);
         }
-        
-        const startPos = attacker.originalPos.clone();
-        const offset = target.isBoss ? 5 : 3;
-        const targetPos = target.mesh.position.clone();
-        targetPos.x += attacker.isPlayer ? -offset : offset; // Stand next to target
 
-        const finishAttack = () => {
-            if (target.status === 'invincible' && !attacker.isPlayer) {
-                this.showMessage(`${target.name} avoids the attack completely!`);
+        if (!anyStillActive) {
+            g.activeCharges.forEach(c => overworld3d.scene.remove(c.mesh));
+            g.activeCharges = [];
+            if (g.phase === 1) {
+                g.waveIndex++;
+                if (g.waveIndex >= cfg.phase1WaveCount) {
+                    g.phase = 2;
+                    window.gameSystem.showDialogue('System', 'Oblongtalo himself surges forward!');
+                }
             } else {
-                this.applyHit(attacker, target, ability);
-            }
-            
-            setTimeout(() => {
-                attacker.mesh.position.copy(startPos);
-                attacker.mesh.rotation.z = 0; // reset rotation
-                setTimeout(() => this.nextTurn(), 500);
-            }, 400);
-        };
-
-        if (ability) {
-            // Ability Animation (Projectile)
-            const projGeo = new THREE.SphereGeometry(1, 16, 16);
-            let projColor = 0xffa500; // default orange (fireball-ish)
-            if (ability.name === 'BLJ') projColor = 0x0000ff; // blue blur
-            if (ability.name.includes('Sword')) projColor = 0x00ffff; // diamond sword color
-            
-            const projMat = new THREE.MeshBasicMaterial({ color: projColor });
-            const projectile = new THREE.Mesh(projGeo, projMat);
-            projectile.position.copy(startPos);
-            projectile.position.y += 2;
-            this.scene.add(projectile);
-            
-            let pProgress = 0;
-            const projAnim = setInterval(() => {
-                pProgress += 0.05;
-                projectile.position.lerpVectors(startPos, targetPos, pProgress);
-                projectile.position.y += Math.sin(pProgress * Math.PI) * 2;
-                if (pProgress >= 1) {
-                    clearInterval(projAnim);
-                    this.scene.remove(projectile);
-                    finishAttack();
-                }
-            }, 16);
-            return; // Skip physical attack animation
-        }
-
-        let progress = 0;
-        
-        if (attacker.id === 'mario') {
-            // Speedrunner vibrate and teleport
-            let vibrations = 0;
-            const vibAnim = setInterval(() => {
-                vibrations++;
-                attacker.mesh.position.x = startPos.x + (Math.random() - 0.5) * 2;
-                attacker.mesh.position.y = startPos.y + (Math.random() - 0.5) * 2;
-                if (vibrations > 20) {
-                    clearInterval(vibAnim);
-                    attacker.mesh.position.copy(targetPos);
-                    finishAttack();
-                }
-            }, 30);
-        } else if (attacker.id === 'steve') {
-            // Rigid blocky chop
-            attacker.mesh.position.copy(targetPos);
-            const chopAnim = setInterval(() => {
-                progress += 0.2;
-                attacker.mesh.rotation.z = Math.sin(progress * Math.PI) * -0.5;
-                if (progress >= 1) {
-                    clearInterval(chopAnim);
-                    finishAttack();
-                }
-            }, 30);
-        } else if (attacker.id === 'second_coming') {
-            // Acrobatic flip
-            const flipAnim = setInterval(() => {
-                progress += 0.05;
-                attacker.mesh.position.lerpVectors(startPos, targetPos, progress);
-                attacker.mesh.position.y = Math.sin(progress * Math.PI) * 5;
-                attacker.mesh.rotation.z = progress * Math.PI * 4; // Flip twice
-                if (progress >= 1) {
-                    clearInterval(flipAnim);
-                    finishAttack();
-                }
-            }, 16);
-        } else if (attacker.id === 'glitch') {
-            // Teleport striking
-            let teleports = 0;
-            const glitchAnim = setInterval(() => {
-                teleports++;
-                attacker.mesh.position.lerpVectors(startPos, targetPos, teleports / 5);
-                attacker.mesh.position.x += (Math.random() - 0.5) * 4; // glitch horizontal
-                if (teleports >= 5) {
-                    clearInterval(glitchAnim);
-                    attacker.mesh.position.copy(targetPos);
-                    finishAttack();
-                }
-            }, 100);
-        } else {
-            // Generic leap
-            const leapAnim = setInterval(() => {
-                progress += 0.05;
-                attacker.mesh.position.lerpVectors(startPos, targetPos, progress);
-                attacker.mesh.position.y = Math.sin(progress * Math.PI) * 10;
-                if (progress >= 1) {
-                    clearInterval(leapAnim);
-                    finishAttack();
-                }
-            }, 16);
-        }
-    }
-
-    executeAoEAttack(attacker, targets, ability) {
-        this.actionMenu.innerHTML = '';
-        this.showMessage(`${attacker.name} uses ${ability.name} on everyone!`);
-        
-        const startPos = attacker.originalPos.clone();
-        
-        let hitsLanded = 0;
-        
-        targets.forEach(target => {
-            const targetPos = target.mesh.position.clone();
-            
-            const projGeo = new THREE.SphereGeometry(1.5, 16, 16);
-            let projColor = 0xff4500; // orange-red for Fire Aglore
-            const projMat = new THREE.MeshBasicMaterial({ color: projColor });
-            const projectile = new THREE.Mesh(projGeo, projMat);
-            projectile.position.copy(startPos);
-            projectile.position.y += 2;
-            this.scene.add(projectile);
-            
-            let pProgress = 0;
-            const projAnim = setInterval(() => {
-                pProgress += 0.05;
-                projectile.position.lerpVectors(startPos, targetPos, pProgress);
-                projectile.position.y += Math.sin(pProgress * Math.PI) * 2;
-                if (pProgress >= 1) {
-                    clearInterval(projAnim);
-                    this.scene.remove(projectile);
-                    this.applyHit(attacker, target, ability);
-                    
-                    hitsLanded++;
-                    if (hitsLanded === targets.length) {
-                        setTimeout(() => this.nextTurn(), 1000);
-                    }
-                }
-            }, 16);
-        });
-    }
-
-    applyHit(attacker, target, ability) {
-        target.mesh.rotation.z = attacker.isPlayer ? 0.3 : -0.3; // tilt back
-        
-        this.shakeScreen(target.isBoss ? 0.8 : 0.4);
-
-        let powerMultiplier = ability ? ability.power : 1;
-        let damage = Math.max(1, Math.floor((attacker.attack * powerMultiplier) * (Math.random() * 0.4 + 0.8) - target.defense * 0.5));
-        
-        if (target.isDefending) {
-            damage = Math.floor(damage / 2);
-            target.isDefending = false;
-        }
-        
-        // Invincible Mode
-        if (target.isPlayer && window.gameSystem && window.gameSystem.godMode) {
-            damage = 0;
-            this.showMessage(`Invincible Mode Blocked ${attacker.name}'s attack!`);
-        }
-
-        target.hp = Math.max(0, target.hp - damage);
-        
-        this.showDamage(damage, target);
-        this.renderStatus();
-        
-        if (target.isBoss) {
-            const hpPercent = (target.hp / target.maxHp) * 100;
-            this.bossHealthFill.style.width = `${hpPercent}%`;
-        }
-
-        setTimeout(() => {
-            target.mesh.rotation.z = 0; // reset tilt
-            if (target.hp === 0) {
-                target.mesh.userData.isDead = true; 
-                target.mesh.rotation.x = -Math.PI / 2;
-                target.mesh.position.y = -0.5;
-                if (!target.isPlayer && target.xpReward) {
-                    this.totalXpEarned += target.xpReward;
+                g.chargeIndex++;
+                if (g.chargeIndex >= cfg.phase2ChargeCount) {
+                    this.finishGauntlet();
+                    return;
                 }
             }
-        }, 300);
-    }
-
-    showDamage(amount, targetHero = null) {
-        const dmgEl = document.createElement('div');
-        dmgEl.className = 'damage-number';
-        dmgEl.innerText = amount;
-        
-        // Default to center if target isn't specified
-        dmgEl.style.left = '50%';
-        dmgEl.style.top = '30%';
-        
-        if (targetHero && typeof amount === 'string' && amount.startsWith('+')) {
-            dmgEl.style.color = '#4ade80'; // Green for healing
-        }
-        
-        dmgEl.style.transform = 'translate(-50%, -50%)';
-        document.body.appendChild(dmgEl);
-        setTimeout(() => dmgEl.remove(), 1000);
-    }
-
-    showMessage(text) {
-        this.messageBox.innerText = text;
-        this.messageBox.classList.remove('hidden');
-    }
-
-    nextTurn() {
-        this.currentTurnIndex++;
-        if (this.currentTurnIndex >= this.turnOrder.length) {
-            this.calculateTurnOrder();
-        }
-        this.processTurn();
-    }
-
-    endCombat(won) {
-        this.active = false;
-        if (won) {
-            let levelUpMessages = [];
-            // Distribute XP
-            window.gameSystem.party.forEach(hero => {
-                if (hero.level) {
-                    hero.exp += this.totalXpEarned;
-                    while (hero.exp >= hero.expToNext) {
-                        hero.exp -= hero.expToNext;
-                        hero.level++;
-                        hero.expToNext = Math.floor(hero.expToNext * 1.5); // scale up
-                        
-                        // Stat Boosts
-                        hero.maxHp += 20;
-                        hero.maxMp += 10;
-                        hero.attack += 5;
-                        hero.defense += 5;
-                        hero.hp = hero.maxHp;
-                        hero.mp = hero.maxMp;
-                        
-                        let msg = `${hero.name} grew to Level ${hero.level}!`;
-                        
-                        // Check for new abilities
-                        if (hero.id !== 'glitch' && LEVEL_ABILITIES[hero.id] && LEVEL_ABILITIES[hero.id][hero.level]) {
-                            const newAbility = LEVEL_ABILITIES[hero.id][hero.level];
-                            hero.abilities.push(newAbility);
-                            msg += ` Learned ${newAbility.name}!`;
-                        }
-                        levelUpMessages.push(msg);
-                    }
-                }
-            });
-
-            const coinsEarned = this.isBossEncounter ? 50 : 10;
-            if (window.gameSystem) {
-                if (!window.gameSystem.coins) window.gameSystem.coins = 0;
-                window.gameSystem.coins += coinsEarned;
-                
-                if (window.bountySystem) {
-                    window.bountySystem.trackProgress('collect_coins', coinsEarned);
-                    if (this.isBossEncounter) {
-                        window.bountySystem.trackProgress('kill_boss', 1);
-                    } else {
-                        window.bountySystem.trackProgress('kill_enemy', 1);
-                    }
-                }
-            }
-
-            const victoryMsg = levelUpMessages.length > 0 
-                ? `Victory! Earned ${this.totalXpEarned} EXP and ${coinsEarned} Coins!\n` + levelUpMessages.join('\n')
-                : `Victory! Earned ${this.totalXpEarned} EXP and ${coinsEarned} Coins!`;
-
-            this.showMessage(victoryMsg);
-            
-            setTimeout(() => {
-                this.uiLayer.classList.add('hidden');
-                this.messageBox.classList.add('hidden');
-                this.bossHealthContainer.classList.add('hidden');
-                // Cleanup scene
-                while(this.scene.children.length > 0) this.scene.remove(this.scene.children[0]);
-                if (window.gameSystem) window.gameSystem.endCombat(true, this.isBossFight);
-            }, Math.max(2000, levelUpMessages.length * 1000 + 1000));
-        } else {
-            this.showMessage("Game Over!");
-            setTimeout(() => location.reload(), 2000);
+            g.state = 'waiting';
+            g.timer = 1.4;
         }
     }
 
-    render() {
-        if (this.active) {
-            // Billboarding logic for combat scene
-            this.scene.traverse((object) => {
-                if (object.name === "billboard") {
-                    // Check if parent group is marked dead
-                    if (object.parent && object.parent.userData.isDead) return;
-                    
-                    const targetPos = new THREE.Vector3(this.camera.position.x, object.position.y, this.camera.position.z);
-                    object.lookAt(targetPos);
-                }
-            });
-
-            overworld3d.renderer.render(this.scene, this.camera);
+    finishGauntlet() {
+        this.gauntlet = null;
+        if (overworld3d.oblongtaloMesh) {
+            overworld3d.scene.remove(overworld3d.oblongtaloMesh);
+            overworld3d.oblongtaloMesh = null;
         }
+        window.gameSystem.state = 'overworld';
+        window.gameSystem.onOblongtaloSurvived();
     }
 }
 
-const combat3d = new Combat3D();
+const combatSystem = new CombatSystem();
+window.combatSystem = combatSystem;
