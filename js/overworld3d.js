@@ -52,6 +52,7 @@ class Overworld3D {
 
         this.cameraTarget = new THREE.Vector3(0, 5, 0);
         this.colliders = [];
+        this.houses = [];
 
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         this.cameraYaw = 0;
@@ -95,6 +96,7 @@ class Overworld3D {
         this.entities.forEach(ent => { if (ent.mesh && ent.mesh.parent) ent.mesh.parent.remove(ent.mesh); });
         this.entities = [];
         this.colliders = [];
+        this.houses = [];
 
         this.scene.background = new THREE.Color(0x87ceeb);
         this.scene.fog = new THREE.Fog(0x87ceeb, 20, 180);
@@ -146,17 +148,108 @@ class Overworld3D {
         if (colliderOpts !== false) this.addCollider(group, colliderOpts || { shrink: 0.5 });
     }
 
-    buildHut(x, z) {
+    // Walk-in round hut. The door faces doorAngle (0 = +z, PI/2 = +x). The wall collides as a
+    // ring of small boxes with a gap at the door, so the player can walk inside.
+    buildHut(x, z, doorAngle = 0) {
+        const R = 7, H = 7, doorH = 5.5, doorHalf = 0.32;
         const g = new THREE.Group();
-        const wall = new THREE.Mesh(new THREE.CylinderGeometry(3, 3.4, 4, 10), new THREE.MeshStandardMaterial({ color: 0xd9c39a, roughness: 0.9 }));
-        wall.position.y = 2;
+        g.position.set(x, 0, z);
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xd9c39a, roughness: 0.9, side: THREE.DoubleSide, transparent: true });
+        const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 40, 1, true, doorHalf, PI * 2 - doorHalf * 2), wallMat);
+        wall.position.y = H / 2;
+        wall.rotation.y = doorAngle;
         wall.castShadow = true;
+        wall.receiveShadow = true;
         g.add(wall);
-        const roof = new THREE.Mesh(new THREE.ConeGeometry(4, 3, 10), new THREE.MeshStandardMaterial({ color: 0x7a5a3a }));
-        roof.position.y = 5.5;
+        const lintel = new THREE.Mesh(new THREE.CylinderGeometry(R, R, H - doorH, 8, 1, true, -doorHalf, doorHalf * 2), wallMat);
+        lintel.position.y = doorH + (H - doorH) / 2;
+        lintel.rotation.y = doorAngle;
+        g.add(lintel);
+
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(R + 1.5, 5, 40), new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 1 }));
+        roof.position.y = H + 2.5;
         roof.castShadow = true;
         g.add(roof);
-        this.addProp(g, x, z, { shrink: 0.5 });
+
+        // Interior: wooden floor, rug, bed, table with stools, and a warm lantern
+        const wood = new THREE.MeshStandardMaterial({ color: 0x9a6b3f, roughness: 0.8 });
+        const floor = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.1, R - 0.1, 0.1, 40), new THREE.MeshStandardMaterial({ color: 0xb08250, roughness: 0.9 }));
+        floor.position.y = 0.05;
+        floor.receiveShadow = true;
+        g.add(floor);
+        const rug = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.05, 32), new THREE.MeshStandardMaterial({ color: 0xb8433a, roughness: 1 }));
+        rug.position.y = 0.12;
+        g.add(rug);
+
+        // Furniture is placed in door-relative coordinates: +f toward the door, +s to its side.
+        const fwd = new THREE.Vector3(Math.sin(doorAngle), 0, Math.cos(doorAngle));
+        const side = new THREE.Vector3(fwd.z, 0, -fwd.x);
+        const local = (f, s) => new THREE.Vector3().addScaledVector(fwd, f).addScaledVector(side, s);
+        const furniture = [];
+
+        const bed = new THREE.Group();
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 5), wood);
+        frame.position.y = 0.5;
+        bed.add(frame);
+        const blanket = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.3, 3.6), new THREE.MeshStandardMaterial({ color: 0x3b6ea5, roughness: 1 }));
+        blanket.position.set(0, 1.15, 0.6);
+        bed.add(blanket);
+        const pillow = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 10), new THREE.MeshStandardMaterial({ color: 0xf2eee0 }));
+        pillow.scale.set(2.2, 0.6, 1.2);
+        pillow.position.set(0, 1.25, -1.8);
+        bed.add(pillow);
+        bed.position.copy(local(-3.2, 2.2));
+        bed.rotation.y = doorAngle;
+        furniture.push(bed);
+
+        const table = new THREE.Group();
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.2, 24), wood);
+        top.position.y = 2.2;
+        table.add(top);
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.35, 2.2, 10), wood);
+        leg.position.y = 1.1;
+        table.add(leg);
+        table.position.copy(local(-1, -3));
+        furniture.push(table);
+        [0.9, -2.9].forEach(f => {
+            const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.2, 14), wood);
+            stool.position.copy(local(f, -3)).setY(0.6);
+            g.add(stool);
+        });
+
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 10),
+            new THREE.MeshStandardMaterial({ color: 0xffd98a, emissive: 0xffa640, emissiveIntensity: 1 }));
+        lantern.position.set(0, H - 1, 0);
+        g.add(lantern);
+        const light = new THREE.PointLight(0xffc070, 0.9, R * 2);
+        light.position.set(0, H - 1.5, 0);
+        g.add(light);
+
+        furniture.forEach(f => g.add(f));
+        this.worldGroup.add(g);
+        g.updateMatrixWorld(true);
+        furniture.forEach(f => this.addCollider(f, { shrink: 0.2 }));
+
+        const segs = 40;
+        for (let i = 0; i < segs; i++) {
+            const a = (i / segs) * PI * 2;
+            const diff = Math.atan2(Math.sin(a - doorAngle), Math.cos(a - doorAngle));
+            if (Math.abs(diff) < doorHalf + 0.1) continue;
+            const cx = x + Math.sin(a) * R, cz = z + Math.cos(a) * R;
+            this.colliders.push(new THREE.Box3(new THREE.Vector3(cx - 0.7, -1, cz - 0.7), new THREE.Vector3(cx + 0.7, H, cz + 0.7)));
+        }
+
+        this.houses.push({ x, z, r: R - 0.8, roof, wallMat });
+    }
+
+    // Returns the hut the player is standing in, if any.
+    houseAt(pos) {
+        return this.houses.find(h => Math.hypot(pos.x - h.x, pos.z - h.z) < h.r) || null;
+    }
+
+    isNearHouse(x, z, margin) {
+        return this.houses.some(h => Math.hypot(x - h.x, z - h.z) < h.r + margin);
     }
 
     buildPalmTree(x, z) {
@@ -216,7 +309,9 @@ class Overworld3D {
 
     buildEmeraldCoast() {
         // Octo Village huts
-        [[-14, 8], [16, 6], [-10, 22], [4, -6]].forEach(([x, z]) => this.buildHut(x, z));
+        // Doors face the village center.
+        [[-26, 8, PI / 2], [26, 4, -PI / 2], [-22, 34, PI / 2], [24, 32, -PI / 2], [0, -14, 0]]
+            .forEach(([x, z, door]) => this.buildHut(x, z, door));
 
         // Barnico (story NPC, repeatable dialogue)
         const barnico = VoxelBuilder.buildCharacter(buildBarnicoParts());
@@ -241,6 +336,7 @@ class Overworld3D {
             const x = (Math.random() - 0.5) * 120;
             const z = 30 - Math.random() * 60;
             if (Math.abs(x) < 12 && z > 0) continue; // keep village clearing
+            if (this.isNearHouse(x, z, 3)) continue;
             if (Math.random() > 0.5) this.buildPalmTree(x, z); else this.buildCrabRock(x, z);
         }
 
@@ -248,6 +344,7 @@ class Overworld3D {
         for (let i = 0; i < 14; i++) {
             const x = (Math.random() - 0.5) * 60;
             const z = -20 - Math.random() * 60;
+            if (this.isNearHouse(x, z, 3)) continue;
             this.buildCrabRock(x, z);
         }
 
@@ -499,9 +596,19 @@ class Overworld3D {
             player.mp = Math.min(player.maxMp, player.mp + 3 * delta);
         }
 
-        // Camera follow
-        const trailDistance = 20;
-        const heightOffset = 6;
+        // Camera follow. Inside a hut, pull the camera in, lift off the roof and fade the walls
+        // so the room stays visible.
+        const insideHouse = this.houseAt(this.playerObj.position);
+        this.houses.forEach(h => {
+            const inside = h === insideHouse;
+            h.roof.visible = !inside;
+            h.wallMat.opacity += ((inside ? 0.25 : 1) - h.wallMat.opacity) * Math.min(1, delta * 8);
+            h.wallMat.depthWrite = h.wallMat.opacity > 0.95;
+        });
+        const targetTrail = insideHouse ? 7 : 20;
+        this.camTrail = this.camTrail === undefined ? targetTrail : this.camTrail + (targetTrail - this.camTrail) * Math.min(1, delta * 4);
+        const trailDistance = this.camTrail;
+        const heightOffset = insideHouse ? 4 : 6;
         const camDir = new THREE.Vector3();
         this.camera.getWorldDirection(camDir);
         this.camera.position.copy(this.playerObj.position);
