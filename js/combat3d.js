@@ -8,6 +8,11 @@ const PROJECTILE_RANGE = 40;
 const PROJECTILE_SPEED = 26;
 const ATTACK_COOLDOWN = 0.5;
 const PLAYER_HIT_INVINCIBILITY = 1.0;
+// Aim help for spells/arrows: snap toward an enemy roughly in front, gently curve toward it,
+// and use a forgiving hit radius so near-misses still connect.
+const AIM_ASSIST_HALF_ANGLE = 0.6;   // ~34 degrees cone in front of the player
+const PROJECTILE_HIT_RADIUS = 3;
+const HOMING_RATE = 4;
 
 class CombatSystem {
     constructor() {
@@ -51,11 +56,21 @@ class CombatSystem {
         forward.y = 0; forward.normalize();
 
         if (weapon.playStyle === 'range' || weapon.playStyle === 'magick') {
-            this.spawnProjectile(overworld3d.playerObj.position.clone().add(new THREE.Vector3(0, 2, 0)), forward, weapon);
+            const origin = overworld3d.playerObj.position.clone().add(new THREE.Vector3(0, 2, 0));
+            const aim = this.acquireAimTarget(overworld3d.playerObj.position, forward);
+            this.spawnProjectile(origin, aim ? aim.dir : forward, weapon, aim ? aim.ent : null);
         } else {
             this.meleeSwing(forward, weapon);
         }
         window.gameSystem.updateHUD();
+    }
+
+    // If an enemy is roughly in front, return a heading straight at it (aim assist).
+    acquireAimTarget(fromPos, forward) {
+        const t = this.findNearestTargetInCone(fromPos, forward, PROJECTILE_RANGE, AIM_ASSIST_HALF_ANGLE);
+        if (!t) return null;
+        const dir = new THREE.Vector3(t.ent.mesh.position.x - fromPos.x, 0, t.ent.mesh.position.z - fromPos.z).normalize();
+        return { ent: t.ent, dir };
     }
 
     meleeSwing(forward, weapon) {
@@ -67,14 +82,14 @@ class CombatSystem {
         }
     }
 
-    spawnProjectile(origin, dir, weapon) {
+    spawnProjectile(origin, dir, weapon, homingTarget = null) {
         const geo = new THREE.SphereGeometry(0.4, 8, 8);
         const color = weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066;
         const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.copy(origin);
         overworld3d.scene.add(mesh);
-        this.projectiles.push({ mesh, dir: dir.clone(), traveled: 0, weapon });
+        this.projectiles.push({ mesh, dir: dir.clone(), traveled: 0, weapon, homingTarget });
     }
 
     findNearestTargetInCone(fromPos, forward, range, halfAngle) {
@@ -149,6 +164,7 @@ class CombatSystem {
         if (ent.type === 'boss' && ent.bossId === 'croton') {
             window.gameSystem.onCrotonDefeated();
         }
+        if (overworld3d.tryOpenGates) overworld3d.tryOpenGates(); // open temple gates when a room clears
         window.gameSystem.updateHUD();
     }
 
@@ -195,11 +211,23 @@ class CombatSystem {
     updateProjectiles(delta) {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const p = this.projectiles[i];
+
+            // Gently curve toward the locked-on enemy so near-misses still land.
+            if (p.homingTarget && p.homingTarget.data.hp > 0) {
+                const desired = new THREE.Vector3(
+                    p.homingTarget.mesh.position.x - p.mesh.position.x, 0,
+                    p.homingTarget.mesh.position.z - p.mesh.position.z);
+                if (desired.lengthSq() > 0.0001) {
+                    desired.normalize();
+                    p.dir.lerp(desired, Math.min(1, HOMING_RATE * delta)).normalize();
+                }
+            }
+
             const step = PROJECTILE_SPEED * delta;
             p.mesh.position.addScaledVector(p.dir, step);
             p.traveled += step;
 
-            const hitEnt = this.findNearestTargetInRadius(p.mesh.position, 1.5);
+            const hitEnt = this.findNearestTargetInRadius(p.mesh.position, PROJECTILE_HIT_RADIUS);
             if (hitEnt) {
                 this.damageEntity(hitEnt, this.computePower(p.weapon, hitEnt));
                 if (p.weapon.playStyle === 'magick' && hitEnt.data.hp > 0) {
@@ -239,7 +267,16 @@ class CombatSystem {
                 const speed = (isCroton ? 3 : ent.data.speed || 3) * delta;
                 if (dist > meleeRange) {
                     const dir = new THREE.Vector3().subVectors(playerPos, entPos).normalize();
-                    ent.mesh.position.addScaledVector(dir, speed);
+                    const half = isCroton ? 4 : 1.2; // enemy footprint for wall collision
+                    const nx = entPos.x + dir.x * speed, nz = entPos.z + dir.z * speed;
+                    // Move, but don't walk through walls/gates: try full move, else slide along one axis.
+                    if (!overworld3d.isBlocked(nx, nz, half)) {
+                        ent.mesh.position.x = nx; ent.mesh.position.z = nz;
+                    } else if (!overworld3d.isBlocked(nx, entPos.z, half)) {
+                        ent.mesh.position.x = nx;
+                    } else if (!overworld3d.isBlocked(entPos.x, nz, half)) {
+                        ent.mesh.position.z = nz;
+                    }
                 }
             }
 

@@ -51,6 +51,16 @@ class GameSystem3D {
         this.updateHUD();
     }
 
+    // A brief, non-blocking on-screen message (does not pause the game like dialogue does).
+    showToast(text) {
+        const el = document.getElementById('game-toast');
+        if (!el) return;
+        el.textContent = text;
+        el.classList.add('visible');
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => el.classList.remove('visible'), 2200);
+    }
+
     triggerStoryNPC(storyId) {
         if (storyId === 'barnico') {
             const player = this.party[0];

@@ -1066,3 +1066,29 @@ input[type=range]::-webkit-slider-runnable-track {
     box-shadow: 0 0 12px rgba(251,191,36,0.5);
 }
 
+/* Transient toast notification (non-blocking) */
+#game-toast {
+    position: absolute;
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.78);
+    color: #ffe9a8;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 10px;
+    border: 2px solid #ffb24d;
+    font-size: 1.15rem;
+    letter-spacing: 0.5px;
+    z-index: 95;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 0 18px rgba(255,120,30,0.45);
+}
+#game-toast.visible {
+    opacity: 1;
+}
+
