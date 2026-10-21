@@ -22,33 +22,78 @@ class GameSystem3D {
         this.difficultyStr = 'HARD';
         this.difficultyMultiplier = 1.0;
 
+        this.setDifficulty = (level) => {
+            this.difficultyStr = level;
+            this.difficultyMultiplier = diffMultipliers[level];
+            diffBtn.innerText = `🔥 DIFFICULTY: ${level}`;
+            const color = { HARD: '#ff4757', NORMAL: '#ffa502', EASY: '#2ed573' }[level];
+            diffBtn.style.color = color; diffBtn.style.borderColor = color;
+        };
         diffBtn.addEventListener('click', () => {
-            let idx = diffLevels.indexOf(this.difficultyStr);
-            idx = (idx + 1) % diffLevels.length;
-            this.difficultyStr = diffLevels[idx];
-            this.difficultyMultiplier = diffMultipliers[this.difficultyStr];
-            diffBtn.innerText = `🔥 DIFFICULTY: ${this.difficultyStr}`;
-            if (this.difficultyStr === 'HARD') { diffBtn.style.color = '#ff4757'; diffBtn.style.borderColor = '#ff4757'; }
-            if (this.difficultyStr === 'NORMAL') { diffBtn.style.color = '#ffa502'; diffBtn.style.borderColor = '#ffa502'; }
-            if (this.difficultyStr === 'EASY') { diffBtn.style.color = '#2ed573'; diffBtn.style.borderColor = '#2ed573'; }
+            this.setDifficulty(diffLevels[(diffLevels.indexOf(this.difficultyStr) + 1) % diffLevels.length]);
         });
+
+        // Continue a saved game (the button only shows when a save exists).
+        const contBtn = document.getElementById('continue-btn');
+        if (contBtn && window.SaveGame) {
+            const save = SaveGame.read();
+            if (save) {
+                contBtn.classList.remove('hidden');
+                const info = document.getElementById('continue-info');
+                if (info) info.textContent = SaveGame.describe(save);
+            }
+            contBtn.addEventListener('click', () => this.continueAdventure());
+        }
     }
 
-    beginAdventure(playerChar) {
+    beginAdventure(playerChar, save = null) {
         this.party = [playerChar];
         this.mainMenu.classList.add('hidden');
         this.state = 'overworld';
         overworld3d.start(this.party);
+        if (save) SaveGame.applyWorld(save);
         this.updateHUD();
-        setTimeout(() => {
-            this.showDialogue('System', `${playerChar.name} washes up on the shore of the Emerald Coast, with no memory of how they got there.`);
-        }, 300);
+        if (save) {
+            setTimeout(() => this.showToast('Welcome back! Your game was loaded.'), 400);
+        } else {
+            setTimeout(() => {
+                this.showDialogue('System', `${playerChar.name} washes up on the shore of the Emerald Coast, with no memory of how they got there.`);
+            }, 300);
+        }
+    }
+
+    // Rebuild the player from the save file and drop them back into the world.
+    continueAdventure() {
+        const d = SaveGame.read();
+        if (!d) return;
+        this.setDifficulty(d.difficulty || 'HARD');
+        this.coins = d.coins || 0;
+        const pd = d.player;
+        const defaultWeapon = { ...STARTER_WEAPONS[pd.skillType] };
+        const player = Object.assign({}, pd, {
+            id: 'player', isPlayerCharacter: true, invincibleUntil: 0,
+            defaultWeapon,
+            equippedWeapon: pd.weaponIsDefault ? defaultWeapon : { ...pd.equippedWeapon },
+            build3D: () => VoxelBuilder.buildCharacter(buildPlayerParts(pd.appearance))
+        });
+        player.hp = player.maxHp; player.mp = player.maxMp; player.stamina = player.maxStamina; // you rested while away
+        this.beginAdventure(player, d);
     }
 
     collectCoin() {
         this.coins += 5;
+        Sound.play('coin');
         this.showDialogue('System', 'Found 5 Coins!');
         this.updateHUD();
+    }
+
+    // Befriend the Flow Song creature: its music is yours now (toggle it in the pause menu).
+    collectFlowSong() {
+        this.flowSongUnlocked = true;
+        Sound.play('song');
+        Sound.unlockFlow(true);
+        this.showDialogue('Flow Song', '♪ ~ La la laaa ~ ♪  (The little music-note floats happily beside you. You can now listen to its song while you adventure! Turn it on or off from the Pause menu.)');
+        SaveGame.autosave();
     }
 
     // A brief, non-blocking on-screen message (does not pause the game like dialogue does).
@@ -81,17 +126,37 @@ class GameSystem3D {
         }
     }
 
-    triggerHandWaveEvent() {
+    // Stepping through the Sea Gate: a boat is waiting. Sail out, and a wave shaped like a hand slams down on you.
+    triggerBoatVoyage() {
+        this.isCutscene = true;
+        document.body.classList.add('cutscene-active');
+        this.dialogueQueue = [];
+        overworld3d.beginVoyageScene();
+        this.afterDialogue = () => overworld3d.startSailing();
+        this.showDialogue('System', "Past the temple, the land simply ends. A small wooden boat bobs at the end of an old dock, as if it has been waiting for you. You climb aboard" +
+            (this.party.length > 1 ? ', and Octa hops in beside you.' : '.'));
+    }
+
+    // The wave has just hit: black screen. Say what happened, then wake up in the reef.
+    onVoyageSlam() {
+        this.dialogueQueue = [];
+        this.afterDialogue = () => {
+            overworld3d.finishVoyage();
+            this.afterDialogue = () => { /* (nothing more: the next click ends the cutscene) */ };
+            this.dialogueQueue = [{ speaker: 'System', text: 'Far ahead, past the glittering coral, something huge and old is waiting. Cross the reef to find it. (Watch out for electric eels and fire fish!)' }];
+            setTimeout(() => this.showDialogue('System', 'You wake on the seabed, soaked and aching. All around you, a coral reef glows in colors you have never seen. There is no way back up.'), 900);
+        };
+        this.showDialogue('System', 'A wave rises ahead of you - and for one unnerving moment, it looks exactly like a closing hand. It slams down. The ocean swallows you whole, and you sink a long, long way...');
+    }
+
+    // The far end of the reef: Oblongtalo's plaza.
+    triggerOblongtaloEncounter() {
         this.isCutscene = true;
         this.pendingGauntletStart = true;
         document.body.classList.add('cutscene-active');
-        this.dialogueQueue = [
-            { speaker: 'System', text: 'A wave rises ahead of you - and for one unnerving moment, it looks exactly like a closing hand.' },
-            { speaker: 'System', text: 'It slams down. The ocean swallows you whole, and you sink a long way before you hit bottom.' }
-        ];
+        this.dialogueQueue = [];
         overworld3d.startCinematicFlyin(() => {
-            const nextMsg = this.dialogueQueue.shift();
-            this.showDialogue(nextMsg.speaker, nextMsg.text);
+            this.showDialogue('System', 'The reef opens into a drowned royal plaza. Glowing runes pulse in the floor, and a throne sits empty at the far end... for now.');
         });
     }
 
@@ -169,6 +234,7 @@ class GameSystem3D {
 
         const typeWriter = setInterval(() => {
             textContainer.textContent = text.substring(0, i + 1);
+            Sound.blip(speaker, i);
             i++;
             if (i >= text.length) {
                 clearInterval(typeWriter);
@@ -190,6 +256,15 @@ class GameSystem3D {
     }
 
     endCutscene() {
+        // A cutscene can run several scenes in a row: if one is queued, run it and stay in the cutscene.
+        if (this.afterDialogue) {
+            const next = this.afterDialogue;
+            this.afterDialogue = null;
+            next();
+            if (this.dialogueQueue && this.dialogueQueue.length) return;   // (it queued more text)
+            if (this.isCutscene && overworld3d.voyage) return;             // (still sailing)
+            if (this.afterDialogue) return;
+        }
         this.isCutscene = false;
         document.body.classList.remove('cutscene-active');
 
@@ -198,8 +273,67 @@ class GameSystem3D {
             window.combatSystem.startOblongtaloGauntlet();
         } else if (this.pendingChapterEnd) {
             this.pendingChapterEnd = false;
-            this.showChapterThreeComingSoon();
+            this.startDunesArrival();
         }
+    }
+
+    // Oblongtalo's light carries the player out of the water and onto the sand of Chapter 3.
+    startDunesArrival() {
+        this.isCutscene = true;
+        document.body.classList.add('cutscene-active');
+        if (overworld3d.controls && overworld3d.controls.isLocked) overworld3d.controls.unlock();
+        Sound.play('levelup');
+        overworld3d.setFade(1, 1.4, '#dff4ff');            // the water glows brighter and brighter...
+        setTimeout(() => {
+            overworld3d.arriveInDesert();
+            overworld3d.setFade(0, 2.4, '#fff3d6');         // ...and fades into hot, golden light
+            this.showDialogue('System', "The water around you begins to glow, pulling you upward and outward all at once. When the light fades, the ocean is gone. In its place: endless, shifting dunes, and a sun that hums like it's counting something. This is the Dunes of Force.");
+        }, 1700);
+    }
+
+    // The quicksand in Cacto Village has swallowed the player: they fall all the way down into the Gravity Core.
+    onFallIntoCore() {
+        this.isCutscene = true;
+        document.body.classList.add('cutscene-active');
+        if (overworld3d.controls && overworld3d.controls.isLocked) overworld3d.controls.unlock();
+        Sound.play('suck');
+        overworld3d.setFade(1, 1.2, '#000000');
+        setTimeout(() => {
+            GravityCore.begin();                                  // builds the little planet and puts everyone on it
+            overworld3d.setFade(0, 1.8, '#000000');
+            this.dialogueQueue = [
+                { speaker: GravityCore.BOSS_NAME.split(',')[0], text: 'Another one... another one who wants to tear the core apart.' },
+                { speaker: GravityCore.BOSS_NAME.split(',')[0], text: 'I am Graton, protector of the Gravity Core. I will not let you destroy it, even if I have to crush you into dust!' }
+            ];
+            this.showDialogue('System', 'The sand swallows you whole. You fall through darkness for what feels like forever... then the world flips over, and you land on the surface of a small, glowing world with gravity all of its own. This is the Gravity Core.');
+        }, 1400);
+    }
+
+    // Graton falls: the core calms down and the way up to the Sky Kingdom opens.
+    onCoreBossDefeated() {
+        const player = this.party[0];
+        this.coins += 150; player.exp += 400;
+        while (player.exp >= player.expToNext) { player.exp -= player.expToNext; player.level += 1; player.expToNext = Math.round(player.expToNext * 1.3); player.maxHp += 10; player.hp = player.maxHp; }
+        this.updateHUD();
+        const bar = document.getElementById('boss-health-container'); if (bar) bar.classList.add('hidden');
+        this.isCutscene = true;
+        document.body.classList.add('cutscene-active');
+        if (overworld3d.controls && overworld3d.controls.isLocked) overworld3d.controls.unlock();
+        this.dialogueQueue = [
+            { speaker: 'Graton', text: '...The core is calm. You were never here to break it, were you?' },
+            { speaker: 'Graton', text: 'Forgive me. I have guarded it for so long that I forgot how to tell a friend from a threat. Go on. A path of light is opening above you.' },
+            { speaker: 'System', text: 'The black hole folds quietly into itself. A column of light rises from the surface of the core, and it leads up, and up, toward the sky.' }
+        ];
+        this.afterDialogue = () => { this.isCutscene = false; this.showChapterEnd(4, 'SKY KINGDOM', 'You calmed the Gravity Core! Chapter 4, the Sky Kingdom, is coming soon.'); };
+        this.showDialogue('System', 'Graton\u2019s rocks tumble apart, and the little black hole flickers and goes quiet.');
+    }
+
+    // The "chapter over" screen (the text changes per chapter).
+    showChapterEnd(num, title, text) {
+        const ui = document.getElementById('chapter-end-ui');
+        const h2 = ui.querySelector('h2'), h1 = ui.querySelector('h1'), p = ui.querySelector('p');
+        if (h2) h2.textContent = 'Chapter ' + num; if (h1) h1.textContent = title; if (p) p.textContent = text;
+        ui.classList.remove('hidden');
     }
 }
 
@@ -243,7 +377,8 @@ class ShopSystem {
     closeShop() {
         this.shopUI.classList.add('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.lock();
-        this.game.state = 'overworld';
+        this.game.state = (window.GravityCore && GravityCore.active) ? 'core' : 'overworld';
+        SaveGame.autosave(); // remember what you bought
     }
 
     updateCoinDisplay() {
@@ -274,6 +409,7 @@ class ShopSystem {
         const finalPrice = Math.max(1, Math.floor(item.price));
         if ((this.game.coins || 0) < finalPrice) return;
         this.game.coins -= finalPrice;
+        Sound.play('buy');
         const player = this.game.party[0];
 
         if (item.weaponData) {
@@ -315,6 +451,7 @@ class SettingsSystem {
         this.themeColor = '#fbbf24';
 
         this.bindEvents();
+        try { const v = localStorage.getItem('glitching-tales-volume'); if (v !== null) this.setVolume(v); else Sound.setVolume(this.volume); } catch (e) { Sound.setVolume(this.volume); }
     }
 
     bindEvents() {
@@ -331,6 +468,23 @@ class SettingsSystem {
         this.pauseInvincToggle.addEventListener('change', (e) => this.setGodMode(e.target.checked));
         this.pauseMirrorToggle.addEventListener('change', (e) => this.setMirrorMode(e.target.checked));
         this.pauseColorPicker.addEventListener('input', (e) => this.setThemeColor(e.target.value));
+
+        // Save / Flow Song / quit buttons in the pause menu
+        const saveBtn = document.getElementById('pause-save-btn');
+        const flowBtn = document.getElementById('pause-flow-btn');
+        const quitBtn = document.getElementById('pause-quit-btn');
+        saveBtn.addEventListener('click', () => {
+            const ok = SaveGame.save(true);
+            saveBtn.textContent = ok ? '✅ Game saved!' : "⚠️ Can't save right now";
+            setTimeout(() => { saveBtn.textContent = '💾 Save Game'; }, 1800);
+        });
+        flowBtn.addEventListener('click', () => {
+            Sound.setFlow(!Sound.flowOn);
+            this.refreshPauseButtons();
+        });
+        quitBtn.addEventListener('click', () => {
+            if (SaveGame.save(true) || !SaveGame.canSave()) location.reload();
+        });
 
         document.getElementById('moveset-guide-btn').addEventListener('click', () => this.openMovesetGuide());
         document.getElementById('close-moveset-btn').addEventListener('click', () => {
@@ -364,6 +518,16 @@ class SettingsSystem {
         this.volume = val;
         this.volSlider.value = val;
         this.pauseVolSlider.value = val;
+        Sound.setVolume(Number(val));
+        try { localStorage.setItem('glitching-tales-volume', String(val)); } catch (e) {}
+    }
+
+    // Show the Flow Song button only once you've found it, and keep its label up to date.
+    refreshPauseButtons() {
+        const flowBtn = document.getElementById('pause-flow-btn');
+        if (!flowBtn) return;
+        flowBtn.classList.toggle('hidden', !this.game.flowSongUnlocked);
+        flowBtn.textContent = Sound.flowOn ? '🎵 Flow Song: ON' : '🎵 Flow Song: OFF';
     }
 
     setGodMode(val) {
@@ -396,10 +560,11 @@ class SettingsSystem {
     closeSettings() {
         this.settingsUI.classList.add('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.lock();
-        this.game.state = 'overworld';
+        this.game.state = (window.GravityCore && GravityCore.active) ? 'core' : 'overworld';
     }
 
     openPauseMenu() {
+        this.refreshPauseButtons();
         this.pauseUI.classList.remove('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.unlock();
         this.game.state = 'paused';
@@ -408,7 +573,7 @@ class SettingsSystem {
     closePauseMenu() {
         this.pauseUI.classList.add('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.lock();
-        this.game.state = 'overworld';
+        this.game.state = (window.GravityCore && GravityCore.active) ? 'core' : 'overworld';
     }
 }
 

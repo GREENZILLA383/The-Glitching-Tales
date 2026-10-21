@@ -52,9 +52,15 @@ class VoxelBuilder {
         }
     }
 
+    // Extra part options for animation:
+    //   pivot: [x,y,z]   - the part hangs from this point (shoulder, hip...). It is wrapped in a group
+    //                      placed at the pivot and named `name`, so rotating that group swings the limb.
+    //   follow: 'name'   - attach this part to the named pivot group (e.g. a hand follows its arm).
     static buildCharacter(parts) {
         const group = new THREE.Group();
         const materialMap = {}; // Cache materials, keyed by color+opacity+emissive
+        const pivots = {};
+        const followers = [];
 
         parts.forEach(part => {
             const opacity = part.opacity !== undefined ? part.opacity : 1;
@@ -77,12 +83,34 @@ class VoxelBuilder {
             mesh.castShadow = opacity >= 1;
             mesh.receiveShadow = true;
 
-            // Add named parts if needed for animation
-            if (part.name) {
-                mesh.name = part.name;
+            if (part.pivot) {
+                const pg = new THREE.Group();
+                pg.position.set(part.pivot[0], part.pivot[1], part.pivot[2]);
+                pg.name = part.name;
+                mesh.position.set(part.pos[0] - part.pivot[0], part.pos[1] - part.pivot[1], part.pos[2] - part.pivot[2]);
+                mesh.name = part.name + '_mesh';
+                pg.add(mesh);
+                pivots[part.name] = pg;
+                group.add(pg);
+            } else if (part.follow) {
+                if (part.name) mesh.name = part.name;
+                followers.push({ mesh, part });
+            } else {
+                // Add named parts if needed for animation
+                if (part.name) mesh.name = part.name;
+                group.add(mesh);
             }
+        });
 
-            group.add(mesh);
+        // Parts that ride on a pivot (hands on arms, shoes on legs, hair on the head...)
+        followers.forEach(({ mesh, part }) => {
+            const pg = pivots[part.follow];
+            if (pg) {
+                mesh.position.set(part.pos[0] - pg.position.x, part.pos[1] - pg.position.y, part.pos[2] - pg.position.z);
+                pg.add(mesh);
+            } else {
+                group.add(mesh);
+            }
         });
 
         // Add a floating animation mixer for idle

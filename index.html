@@ -2,15 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0820">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Glitching Tales">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-180.png">
+    <script>
+    // Is this a phone / tablet? (touch screen, or forced with ?mobile=1 / the Touch Controls switch). Also: low-graphics mode.
+    (function () {
+        var q = location.search, g = function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } };
+        var coarse = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+        var ua = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var forcedOn = window.FORCE_MOBILE || /[?&]mobile=1/.test(q) || g('gt-touch') === 'on';
+        var forcedOff = /[?&]mobile=0/.test(q) || g('gt-touch') === 'off';
+        window.IS_MOBILE = forcedOff ? false : (forcedOn || coarse || ua);
+        window.LOW_GFX = /[?&]low=1/.test(q) || g('gt-gfx') === 'low' || (window.IS_MOBILE && g('gt-gfx') !== 'high');
+        if (window.IS_MOBILE) document.documentElement.classList.add('is-mobile');
+    })();
+    </script>
     <title>The Glitching Tales</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="rotate-hint"><div class="rh-icon">📱↻</div><div>Turn your phone sideways to play</div></div>
     <div id="game-container">
         <!-- Three.js Canvas Container -->
         <div id="canvas-container"></div>
+
+        <!-- Full-screen fade used by cutscenes (boat voyage, waking up in the reef) -->
+        <div id="screen-fade"></div>
 
         <!-- UI Overlay -->
         <div id="ui-layer">
@@ -42,19 +67,7 @@
         </div>
 
         <!-- Mobile Controls Overlay (Hidden by default via CSS) -->
-        <div id="mobile-controls" class="hidden">
-            <div class="d-pad">
-                <div class="d-btn d-up" id="btn-up">▲</div>
-                <div class="d-btn d-left" id="btn-left">◀</div>
-                <div class="d-btn d-right" id="btn-right">▶</div>
-                <div class="d-btn d-down" id="btn-down">▼</div>
-            </div>
-            <div class="action-buttons">
-                <div class="action-btn-mobile btn-b" id="btn-swap">ATTACK</div>
-                <div class="action-btn-mobile btn-a" id="btn-jump">JUMP</div>
-            </div>
-            <div id="touch-pad-zone"></div>
-        </div>
+        <div id="mobile-controls" class="hidden"><!-- touch joystick + buttons are built by js/mobile.js --></div>
 
         <!-- Main Menu -->
         <div id="main-menu" class="overlay-screen cool-bg">
@@ -64,6 +77,11 @@
                     <h2 class="game-subtitle">TALES</h2>
                 </div>
                 <div class="menu-buttons">
+                    <button id="continue-btn" class="primary-btn hidden" style="margin-bottom: 14px;">
+                        <span class="btn-text">▶ CONTINUE</span>
+                        <div class="btn-glow"></div>
+                    </button>
+                    <div id="continue-info" style="margin: -6px 0 14px; font-size: 0.85rem; opacity: 0.8;"></div>
                     <button id="start-btn" class="primary-btn pulse-anim">
                         <span class="btn-text">START ADVENTURE</span>
                         <div class="btn-glow"></div>
@@ -83,6 +101,7 @@
         <div id="character-creation-ui" class="overlay-screen cool-bg hidden">
             <div class="menu-content glass-panel">
                 <h2 class="game-subtitle">WHO ARE YOU?</h2>
+                <div id="cc-preview" title="Drag to turn your hero around"></div>
                 <div class="setting-row">
                     <label>Name</label>
                     <input type="text" id="cc-name-input" maxlength="20" placeholder="Traveler" style="padding:8px; border-radius:6px; border:none;">
@@ -113,7 +132,7 @@
             <div class="menu-content glass-panel">
                 <h2 class="game-subtitle">Chapter 3</h2>
                 <h1 class="game-title glitch-effect" style="font-size: 2rem;">DUNES OF FORCE</h1>
-                <p>Coming Soon!</p>
+                <p>You crossed the dunes! The rest of this chapter (and its guardian) is coming soon.</p>
                 <button id="chapter-end-menu-btn" class="primary-btn" style="margin-top: 20px;">
                     <span class="btn-text">BACK TO MAIN MENU</span>
                     <div class="btn-glow"></div>
@@ -178,6 +197,16 @@
                 <label>Theme Color</label>
                 <input type="color" id="theme-color-picker" value="#fbbf24">
             </div>
+
+            <div class="setting-row">
+                <label>Low Graphics (restart)</label>
+                <label class="switch"><input type="checkbox" id="lowgfx-toggle"><span class="slider round"></span></label>
+            </div>
+
+            <div class="setting-row">
+                <label>Touch Controls (restart)</label>
+                <label class="switch"><input type="checkbox" id="touch-toggle"><span class="slider round"></span></label>
+            </div>
         </div>
     </div>
 
@@ -213,7 +242,22 @@
                 <input type="color" id="pause-theme-color-picker" value="#fbbf24">
             </div>
 
+            <div class="setting-row">
+                <label>Low Graphics (restart)</label>
+                <label class="switch"><input type="checkbox" id="pause-lowgfx-toggle"><span class="slider round"></span></label>
+            </div>
+
+            <div class="setting-row">
+                <label>Touch Controls (restart)</label>
+                <label class="switch"><input type="checkbox" id="pause-touch-toggle"><span class="slider round"></span></label>
+            </div>
+
+            <button id="pause-fs-btn" class="secondary-btn mobile-only" style="margin-top:6px; width:100%;">⛶ Fullscreen</button>
+
+            <button id="pause-save-btn" class="secondary-btn" style="margin-top:10px; width:100%;">💾 Save Game</button>
+            <button id="pause-flow-btn" class="secondary-btn hidden" style="margin-top:10px; width:100%;">🎵 Flow Song: OFF</button>
             <button id="moveset-guide-btn" class="secondary-btn" style="margin-top:10px; width:100%;">Moveset Guide</button>
+            <button id="pause-quit-btn" class="secondary-btn" style="margin-top:10px; width:100%;">💾 Save &amp; Quit to Menu</button>
             <button id="resume-main-btn" class="buy-btn" style="margin-top:20px; width:100%;">Resume Game</button>
         </div>
     </div>
@@ -231,9 +275,15 @@
 
     <script src="js/voxel.js"></script>
     <script src="js/models3d.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/audio.js"></script>
     <script src="js/combat3d.js"></script>
     <script src="js/overworld3d.js"></script>
     <script src="js/charactercreation.js"></script>
+    <script src="js/savegame.js"></script>
+    <script src="js/quest.js"></script>
+    <script src="js/gravitycore.js"></script>
+    <script src="js/mobile.js"></script>
     <script src="js/main3d.js"></script>
 </body>
 </html>

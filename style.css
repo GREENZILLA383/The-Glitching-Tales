@@ -1010,6 +1010,48 @@ input[type=range]::-webkit-slider-runnable-track {
     100% { text-shadow: -0.025em 0 0 #00fffc, -0.025em -0.025em 0 #fc00ff, -0.025em -0.05em 0 #fffc00; }
 }
 
+/* Secondary (outline) buttons: Settings, Difficulty, Leave shop, skill picker, Moveset Guide */
+.secondary-btn {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #e8ecff;
+    background: rgba(255, 255, 255, 0.07);
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    padding: 11px 26px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.7);
+    transform: translateY(-1px);
+}
+.secondary-btn:active { transform: translateY(0); }
+
+/* The "X" close button in the corner of Settings / Pause / Moveset panels */
+.close-btn {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+.close-btn:hover { background: rgba(255, 90, 90, 0.5); border-color: #ff8a8a; }
+
 /* Player HUD (real-time HP/MP/Stamina/weapon) */
 #player-hud {
     position: absolute;
@@ -1092,3 +1134,156 @@ input[type=range]::-webkit-slider-runnable-track {
     opacity: 1;
 }
 
+
+/* ---- Compass + quest objective ---- */
+#compass {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    width: min(440px, 52vw); height: 36px; border-radius: 18px; overflow: hidden;
+    background: linear-gradient(180deg, rgba(10,16,30,0.62), rgba(10,16,30,0.42));
+    border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    font-family: 'Outfit', sans-serif; z-index: 90; pointer-events: none;
+    opacity: 0; transition: opacity 0.4s;
+}
+#compass.on, #objective.on { opacity: 1; }
+#compass .ct {
+    position: absolute; top: 0; left: 0; width: 28px; margin-left: -14px; height: 100%;
+    display: none; align-items: center; justify-content: center; color: #dce7ff; font-weight: 700; font-size: 13px;
+}
+#compass .ct.minor { color: rgba(255,255,255,0.35); font-size: 14px; }
+#compass .ct.inter { color: rgba(220,231,255,0.7); font-size: 11px; }
+#compass .ct.cardinal { font-size: 16px; color: #ffffff; text-shadow: 0 0 6px rgba(255,255,255,0.5); }
+#compass .ct.north { color: #ff6b6b; text-shadow: 0 0 8px rgba(255,90,90,0.7); }
+#compass-center {
+    position: absolute; left: 50%; top: 0; margin-left: -5px; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 7px solid #ffd166;
+}
+#compass .cm {
+    position: absolute; top: 0; left: 0; width: 64px; margin-left: -32px; height: 100%;
+    display: none; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+    color: #ffd166; text-shadow: 0 0 8px rgba(255,200,80,0.9);
+}
+#compass .cm .cm-gem { font-size: 17px; }
+#compass .cm .cm-dist { font-size: 9px; font-weight: 700; margin-top: 1px; color: #fff3c9; text-shadow: none; }
+#compass .cm.edge { opacity: 0.75; }
+#objective {
+    position: absolute; top: 54px; left: 50%; transform: translateX(-50%);
+    padding: 4px 16px; border-radius: 12px; white-space: nowrap;
+    background: rgba(0,0,0,0.5); color: #ffe9a8; font: 600 14px 'Outfit', sans-serif;
+    z-index: 90; pointer-events: none; opacity: 0; transition: opacity 0.4s;
+}
+#objective.flash { animation: objFlash 1.4s ease-out; }
+@keyframes objFlash {
+    0% { background: rgba(255,200,80,0.9); color: #2a1a00; transform: translateX(-50%) scale(1.18); }
+    100% { background: rgba(0,0,0,0.5); color: #ffe9a8; transform: translateX(-50%) scale(1); }
+}
+.cutscene-active #compass, .cutscene-active #objective { display: none; }
+
+/* ---- Character creation preview ---- */
+#cc-preview {
+    width: 230px; height: min(250px, 30vh); margin: 4px 0 14px; border-radius: 16px; overflow: hidden;
+    background: radial-gradient(circle at 50% 75%, rgba(110,150,255,0.38), rgba(10,15,30,0.55) 70%);
+    border: 1px solid rgba(255,255,255,0.14);
+}
+#cc-preview canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+#character-creation-ui .menu-content { max-height: 94vh; overflow-y: auto; }
+
+/* ---- Cutscene fade (boat voyage) + burning HUD ---- */
+#screen-fade { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; opacity: 0; pointer-events: none; z-index: 40; }
+#player-hud.burning { box-shadow: 0 0 14px 3px rgba(255,140,30,0.85); animation: burnPulse 0.5s infinite alternate; }
+#player-hud.burning::after { content: '🔥 Burning!'; position: absolute; right: 10px; top: 8px; font: 700 12px 'Outfit', sans-serif; color: #ffcf7a; }
+@keyframes burnPulse { from { background: rgba(80,25,0,0.6); } to { background: rgba(140,45,0,0.7); } }
+
+/* ---- Poison status (dune vipers) ---- */
+#player-hud.poisoned { box-shadow: 0 0 14px 3px rgba(110,230,40,0.85); animation: poisonPulse 0.6s infinite alternate; }
+#player-hud.poisoned::after { content: '☠ Poisoned!'; position: absolute; right: 10px; top: 8px; font: 700 12px 'Outfit', sans-serif; color: #c8ff8a; }
+@keyframes poisonPulse { from { background: rgba(20,60,10,0.6); } to { background: rgba(40,110,15,0.7); } }
+
+/* =====================================================================
+   MOBILE (phones + tablets): touch controls and a phone-friendly layout
+   ===================================================================== */
+.mobile-only { display: none; }
+html.is-mobile .mobile-only { display: block; }
+#rotate-hint { display: none; position: fixed; inset: 0; z-index: 9999; background: #0b0820; color: #fff; font: 700 1.2rem 'Outfit', sans-serif; text-align: center; align-items: center; justify-content: center; flex-direction: column; gap: 14px; padding: 20px; }
+#rotate-hint .rh-icon { font-size: 3.2rem; }
+@media (orientation: portrait) { html.is-mobile #rotate-hint { display: flex; } }
+
+/* --- the touch controls themselves --- */
+#mobile-controls.mc-root { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 45; pointer-events: none; touch-action: none; }
+#mobile-controls.mc-off { display: none !important; }
+.mc-stick-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 74%; pointer-events: auto; touch-action: none; }
+.mc-look-zone { position: absolute; right: 0; top: 0; width: 56%; height: 100%; pointer-events: auto; touch-action: none; }
+.mc-stick-base { position: fixed; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; pointer-events: none;
+    left: calc(max(0px, env(safe-area-inset-left)) + 105px); top: 74%;
+    border: 2px solid rgba(255,255,255,0.38); background: radial-gradient(circle, rgba(255,255,255,0.14), rgba(255,255,255,0.04)); opacity: 0.5; transition: opacity 0.15s; }
+.mc-stick-base.live { opacity: 1; }
+.mc-stick-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: rgba(255,255,255,0.6); border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+.mc-btn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font: 800 30px 'Outfit', sans-serif; color: #fff; background: rgba(15,20,40,0.55); border: 2px solid rgba(255,255,255,0.6); box-shadow: 0 4px 14px rgba(0,0,0,0.45); user-select: none; -webkit-user-select: none; }
+.mc-btn.down { background: rgba(251,191,36,0.6); transform: scale(0.93); }
+#mc-attack { right: calc(max(0px, env(safe-area-inset-right)) + 22px); bottom: 26px; width: 94px; height: 94px; font-size: 42px; }
+#mc-jump { right: calc(max(0px, env(safe-area-inset-right)) + 128px); bottom: 20px; width: 72px; height: 72px; }
+.mc-btn-label { font: 700 8px 'Outfit', sans-serif; letter-spacing: 0.5px; margin-top: -2px; opacity: 0.85; }
+.mc-hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: 66%; text-align: center; padding: 7px 14px; border-radius: 12px; background: rgba(0,0,0,0.65); color: #ffe9a8; font: 600 12px 'Outfit', sans-serif; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+.mc-hint.show { opacity: 1; }
+
+/* --- layout tweaks for small screens --- */
+html.is-mobile, html.is-mobile body { width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+html.is-mobile body { position: fixed; inset: 0; }
+html.is-mobile #game-container { width: 100%; height: 100%; }
+html.is-mobile .fullscreen-ui { width: 100%; height: 100%; }
+html.is-mobile #player-hud { top: max(6px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); transform: scale(0.72); transform-origin: top left; }
+html.is-mobile #compass { top: 6px; width: min(300px, 38vw); height: 30px; }
+html.is-mobile #compass .ct.cardinal { font-size: 14px; }
+html.is-mobile #objective { top: 42px; font-size: 11px; padding: 3px 10px; max-width: 58vw; white-space: normal; text-align: center; }
+html.is-mobile #game-toast { top: 74px; font-size: 0.95rem; padding: 7px 14px; max-width: 80vw; }
+html.is-mobile #ui-layer > button { top: max(6px, env(safe-area-inset-top)) !important; right: max(8px, env(safe-area-inset-right)) !important; padding: 8px 12px !important; font-size: 13px !important; min-height: 40px; }
+html.is-mobile #boss-health-container { top: 52px; width: 54%; padding: 3px; border-width: 2px; }
+html.is-mobile #boss-name { font-size: 0.95rem; margin-bottom: 2px; }
+html.is-mobile .boss-bar-fill { height: 14px; }
+html.is-mobile #dialogue-box { bottom: 8px; width: min(88%, 700px); padding: 10px 16px; border-radius: 10px; }
+html.is-mobile .dialogue-text { font-size: 0.95rem !important; line-height: 1.35; }
+html.is-mobile .speaker-name { font-size: 0.85rem !important; }
+html.is-mobile .menu-content { padding: 16px 26px !important; max-height: 96%; overflow-y: auto; }
+html.is-mobile .glass-panel { padding: 14px 24px !important; }
+html.is-mobile .glass-panel:hover { transform: none; }
+html.is-mobile .game-title { font-size: clamp(1.7rem, 11vh, 3rem) !important; letter-spacing: 3px; }
+html.is-mobile .game-subtitle { font-size: 1rem; letter-spacing: 6px; margin-top: 4px; }
+html.is-mobile .menu-buttons { gap: 8px; }
+html.is-mobile .primary-btn, html.is-mobile .secondary-btn { min-height: 42px; padding: 9px 22px; font-size: 0.95rem; }
+html.is-mobile .version-tag { display: none; }
+html.is-mobile #cc-preview { width: 130px; height: 120px; margin: 0 0 6px; }
+html.is-mobile #cc-skill-desc { font-size: 0.8rem; }
+html.is-mobile .setting-row { margin-bottom: 10px; font-size: 1rem; }
+html.is-mobile .settings-panel { width: min(92%, 440px); padding: 16px 20px; max-height: 94%; overflow-y: auto; }
+html.is-mobile .settings-panel h2 { font-size: 1.5rem; margin-bottom: 10px; }
+html.is-mobile #moveset-modal .settings-panel { width: 92% !important; }
+html.is-mobile .shop-container { width: 94%; padding: 12px; gap: 8px; max-height: 94%; }
+html.is-mobile #shop-title { font-size: 1.5rem; }
+html.is-mobile .coin-display { font-size: 1.1rem; padding: 4px 12px; }
+html.is-mobile .shop-body { height: auto; max-height: 58vh; gap: 10px; }
+html.is-mobile .shopkeeper-portrait { display: none; }
+html.is-mobile .shop-items-grid { gap: 8px; }
+html.is-mobile .shop-item { padding: 8px; gap: 5px; }
+html.is-mobile .item-name { font-size: 1rem; }
+html.is-mobile .item-desc { font-size: 0.75rem; }
+
+/* --- phones: panels that can scroll are allowed to, and the character screen is squeezed to fit a landscape phone --- */
+html.is-mobile .menu-content, html.is-mobile .settings-panel, html.is-mobile .shop-items-grid, html.is-mobile .shop-container, html.is-mobile #moveset-content { touch-action: pan-y; -webkit-overflow-scrolling: touch; overflow-y: auto; }
+html.is-mobile #character-creation-ui .menu-content { padding: 8px 22px !important; }
+html.is-mobile #character-creation-ui .game-subtitle { font-size: 0.85rem; letter-spacing: 5px; margin: 0 0 3px; }
+html.is-mobile #cc-preview { width: 110px; height: 84px; margin: 0 0 3px; }
+html.is-mobile #character-creation-ui .setting-row { margin-bottom: 3px; font-size: 0.85rem; gap: 10px; }
+html.is-mobile #character-creation-ui input[type=text] { padding: 4px 8px !important; }
+html.is-mobile .cc-skill-grid { margin-top: 4px; gap: 6px; }
+html.is-mobile .cc-skill-grid .secondary-btn { min-height: 34px; padding: 6px 12px; font-size: 0.8rem; }
+html.is-mobile #cc-skill-desc { min-height: 0 !important; margin: 3px 0 0; font-size: 0.72rem; }
+html.is-mobile #cc-confirm-btn { margin-top: 5px !important; min-height: 38px; padding: 7px 22px; }
+
+/* phones in landscape: the settings / pause panels use two columns so everything fits without scrolling */
+@media (orientation: landscape) {
+    html.is-mobile #pause-ui .settings-panel, html.is-mobile #settings-ui .settings-panel { width: min(94%, 680px); column-count: 2; column-gap: 26px; padding: 12px 22px; }
+    html.is-mobile #pause-ui .settings-panel h2, html.is-mobile #settings-ui .settings-panel h2 { column-span: all; margin: 0 0 8px; }
+    html.is-mobile #pause-ui .setting-row, html.is-mobile #settings-ui .setting-row { margin-bottom: 7px; break-inside: avoid; font-size: 0.92rem; }
+    html.is-mobile #pause-ui .settings-panel button.secondary-btn, html.is-mobile #pause-ui .settings-panel .buy-btn { break-inside: avoid; margin-top: 6px !important; min-height: 36px; padding: 6px 14px; font-size: 0.85rem; }
+}
+html.is-mobile #save-indicator { left: auto !important; right: 50% !important; bottom: auto !important; top: 78px !important; transform: translateX(50%); font-size: 12px !important; padding: 4px 10px !important; }

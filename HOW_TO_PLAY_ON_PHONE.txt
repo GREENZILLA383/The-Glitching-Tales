@@ -1,0 +1,30 @@
+THE GLITCHING TALES - PLAYING ON A PHONE OR TABLET
+====================================================
+
+The game detects touch screens by itself and switches to touch controls.
+
+CONTROLS
+  Left thumb ........ a joystick appears wherever you touch: move
+  Drag on the right . look around
+  Sword button ...... attack (hold it to keep attacking)
+  Jump button ....... jump; hold it in the air to glide (after Elder Barnico gives you the glider)
+  Tap anywhere ...... talk, read, shop, menus
+  Pause (top right) . save, settings, fullscreen, quit
+
+BEST WAY #1  -  open the web page and "install" it (needs the game uploaded to a website, e.g. GitHub Pages)
+  Android (Chrome): open the page -> menu (three dots) -> "Install app" / "Add to Home screen".
+  iPhone / iPad (Safari): open the page -> Share button -> "Add to Home Screen".
+  The game then opens fullscreen from its own icon and keeps working with no internet after the first visit.
+
+BEST WAY #2  -  one single file (no website needed)
+  Copy  glitching-tales-MOBILE.html  to the phone (USB cable, Google Drive, email to yourself...)
+  and open it with Chrome (Android).  It works with no internet at all.
+  (iPhones don't like opening local files in Safari - use way #1 on an iPhone.)
+  Tip: glitching-tales-OFFLINE.html is the very same game; the MOBILE one just forces the touch controls on.
+
+GOOD TO KNOW
+  - Your progress saves automatically (and the moment you switch apps). It is stored on that device.
+  - Phones start in "Low Graphics" mode (smoother). Pause menu -> "Low Graphics" turns it off if your phone is fast.
+  - Pause menu -> "Touch Controls" forces touch mode on or off (e.g. for a touch-screen laptop). Or add  ?mobile=1  to the web address.
+  - Turn the phone sideways (landscape).
+  - Your own Flow Song:  put it in the "music" folder as flow-song.mp3 (see music/README.txt).
