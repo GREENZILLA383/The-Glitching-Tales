@@ -246,6 +246,8 @@ class GameSystem3D {
                     if (this.dialogueQueue && this.dialogueQueue.length > 0) {
                         const nextMsg = this.dialogueQueue.shift();
                         setTimeout(() => this.showDialogue(nextMsg.speaker, nextMsg.text), 100);
+                    } else if (this.afterTalk) {                 // a conversation that ends with a question (like Iolana's race)
+                        const next = this.afterTalk; this.afterTalk = null; next();
                     } else if (this.isCutscene) {
                         this.endCutscene();
                     }
@@ -262,7 +264,8 @@ class GameSystem3D {
             this.afterDialogue = null;
             next();
             if (this.dialogueQueue && this.dialogueQueue.length) return;   // (it queued more text)
-            if (this.isCutscene && overworld3d.voyage) return;             // (still sailing)
+            if (this.cutsceneHold) return;                                  // (the next scene starts after a fade)
+            if (this.isCutscene && (overworld3d.voyage || overworld3d.skyRide)) return;   // (still sailing / flying)
             if (this.afterDialogue) return;
         }
         this.isCutscene = false;
@@ -324,8 +327,88 @@ class GameSystem3D {
             { speaker: 'Graton', text: 'Forgive me. I have guarded it for so long that I forgot how to tell a friend from a threat. Go on. A path of light is opening above you.' },
             { speaker: 'System', text: 'The black hole folds quietly into itself. A column of light rises from the surface of the core, and it leads up, and up, toward the sky.' }
         ];
-        this.afterDialogue = () => { this.isCutscene = false; this.showChapterEnd(4, 'SKY KINGDOM', 'You calmed the Gravity Core! Chapter 4, the Sky Kingdom, is coming soon.'); };
+        this.afterDialogue = () => this.startSkyRide();
         this.showDialogue('System', 'Graton\u2019s rocks tumble apart, and the little black hole flickers and goes quiet.');
+    }
+
+    // Chapter 4: the column of light carries the party up, and a giant friendly cloud catches them in the sky.
+    startSkyRide() {
+        this.isCutscene = true;
+        this.cutsceneHold = true;   // keep the cutscene going while the screen fades to white (the ride begins after that)
+        document.body.classList.add('cutscene-active');
+        Sound.play('levelup');
+        overworld3d.setFade(1, 1.4, '#ffffff');
+        setTimeout(() => {
+            this.cutsceneHold = false;
+            GravityCore.leave();
+            overworld3d.beginSkyRide();
+            overworld3d.setFade(0, 2.2, '#ffffff');
+            this.dialogueQueue = [
+                { speaker: 'Wisp', text: 'Easy, little one! I have you. Hold on tight to my fluff!' },
+                { speaker: 'Wisp', text: 'I am Wisp. When the Gravity Core went calm, the whole sky felt it. The Sky Kingdom has been waiting for someone like you.' },
+                { speaker: 'Wisp', text: 'Hang on. We are going up, up, and over the clouds!' }
+            ];
+            this.afterDialogue = () => overworld3d.startSkyFlight();
+            this.showDialogue('System', 'The light lifts you higher and higher, past the stars, past the clouds... then a huge, puffy shape sweeps underneath you, and you land on something soft, cool and bouncy. A giant cloud has caught you in the sky, and it has a big smiling face!');
+        }, 1500);
+    }
+
+    // The cloud has drifted all the way to the cloud city and landed.
+    onSkyRideEnd() {
+        overworld3d.setFade(1, 1.0, '#ffffff');
+        setTimeout(() => {
+            overworld3d.finishSkyRide();
+            overworld3d.setFade(0, 2.0, '#ffffff');
+            this.dialogueQueue = [
+                { speaker: 'Wisp', text: 'This is as far as I can carry you. The city is yours to explore!' },
+                { speaker: 'Wisp', text: 'But be careful. Something up here has been stirring ever since the core went quiet.' }
+            ];
+            this.showDialogue('System', 'Wisp drifts down onto the landing pad and settles with a happy little puff. Before you, white towers with bright roofs rise out of the mist. This is the Sky Kingdom.');
+        }, 1200);
+    }
+
+    // Talking to a villager of Makani: the first time you get their whole introduction, after that a different chat line each time.
+    talkToVillager(ent) {
+        const v = ent.v, ow = overworld3d, first = !ow.metVillagers.has(v.id);
+        ow.metVillagers.add(v.id);
+        if (v.id === 'iolana' && !first) { this.offerKiteRace(ent); return; }   // after the first hello, she offers her kite race
+        const lines = first ? v.intro.slice() : [v.chat[(ent.chatIdx = ((ent.chatIdx === undefined ? -1 : ent.chatIdx) + 1)) % v.chat.length]];
+        const who = v.name + ', ' + v.title;
+        this.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
+        this.showDialogue(who, lines[0]);
+        if (first && window.SaveGame) setTimeout(() => SaveGame.autosave(), 500);
+    }
+
+    // Iolana invites you to her kite ring race (talk to her again after the first hello).
+    offerKiteRace(ent) {
+        const ow = overworld3d, who = ent.v.name + ', ' + ent.v.title, best = ow.kiteBest, medals = ['', 'Bronze', 'Silver', 'Gold'];
+        const steer = window.IS_MOBILE ? 'Use the left thumb stick: left and right to steer, up to climb, down to dive.' : 'Steer with A and D. W climbs and S dives.';
+        const lines = best == null
+            ? ['My kite race! Twelve glowing rings in one big loop around Makani. Fly through them all before the wind gets bored of you.', steer + ' Ready to fly?']
+            : ['Back for more? Your best is ' + best.toFixed(1) + ' seconds (' + (medals[ow.kiteMedal] || 'Bronze') + '). Gold needs ' + KiteRace.GOLD + ' seconds or less. Ready to fly?'];
+        this.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
+        this.afterTalk = () => this.showChoice('Race Iolana’s kite course?', 'Yes, let’s fly!', 'Maybe later', () => KiteRace.begin(ent), () => this.showToast('Iolana: "The wind will wait for you!"'));
+        this.showDialogue(who, lines[0]);
+    }
+
+    // A little yes / no question on the screen. onYes / onNo run after the player picks.
+    showChoice(text, yesLabel, noLabel, onYes, onNo) {
+        const box = document.getElementById('choice-box'), yes = document.getElementById('choice-yes'), no = document.getElementById('choice-no');
+        document.getElementById('choice-text').textContent = text;
+        yes.textContent = yesLabel; no.textContent = noLabel;
+        if (overworld3d.controls && overworld3d.controls.isLocked) overworld3d.controls.unlock();
+        this.state = 'choice';
+        box.classList.remove('hidden');
+        const done = (fn) => {
+            box.classList.add('hidden');
+            document.removeEventListener('keydown', onKey);
+            yes.onclick = no.onclick = null;
+            this.state = 'overworld';
+            if (fn) fn();
+        };
+        const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'enter' || k === 'y') done(onYes); else if (k === 'escape' || k === 'n') done(onNo); };
+        yes.onclick = () => done(onYes); no.onclick = () => done(onNo);
+        document.addEventListener('keydown', onKey);
     }
 
     // The "chapter over" screen (the text changes per chapter).
@@ -564,6 +647,7 @@ class SettingsSystem {
     }
 
     openPauseMenu() {
+        if (window.KiteRace && KiteRace.active) { KiteRace.end('quit'); return; }   // (the Pause button cancels the kite race)
         this.refreshPauseButtons();
         this.pauseUI.classList.remove('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.unlock();

@@ -1317,6 +1317,43 @@ html.is-mobile #cc-confirm-btn { margin-top: 5px !important; min-height: 38px; p
 }
 html.is-mobile #save-indicator { left: auto !important; right: 50% !important; bottom: auto !important; top: 78px !important; transform: translateX(50%); font-size: 12px !important; padding: 4px 10px !important; }
 
+/* ---- talking to villagers: the "Press E" hint (desktop) and the 💬 button (phones) ---- */
+#talk-prompt { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 9px 20px; border-radius: 22px; background: rgba(10,16,34,0.78); color: #fff4c9; border: 2px solid #ffd166; font: 700 1.05rem 'Outfit', sans-serif; z-index: 100; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,0.4); animation: talkPulse 1.4s ease-in-out infinite alternate; }
+@keyframes talkPulse { from { box-shadow: 0 0 6px rgba(255,209,102,0.3); } to { box-shadow: 0 0 18px rgba(255,209,102,0.85); } }
+html.is-mobile #talk-prompt { display: none; }
+#mc-talk { display: none; right: calc(max(0px, env(safe-area-inset-right)) + 56px); bottom: 132px; width: 68px; height: 68px; font-size: 32px; background: rgba(255,209,102,0.55); border-color: #ffd166; animation: talkPulse 1.2s ease-in-out infinite alternate; }
+#mc-talk.show { display: flex; }
+
+/* --- Iolana's Kite Ring Race + the little yes / no box --- */
+#kite-hud { position: absolute; inset: 0; pointer-events: none; z-index: 60; font-family: 'Outfit', sans-serif; color: #fff; }
+#kite-top { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; padding: 8px 20px; border-radius: 26px; background: rgba(10,16,34,0.72); border: 2px solid #8ad0ff; font-weight: 800; font-size: 1.35rem; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+#kite-time.low { color: #ff7a7a; animation: talkPulse 0.5s ease-in-out infinite alternate; }
+#kite-best { font-size: 0.9rem; font-weight: 700; color: #ffe9a8; }
+#kite-best:empty { display: none; }
+#kite-compass { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+#kite-arrow { font-size: 2.2rem; color: #ffd23f; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); transition: transform 0.08s linear; }
+#kite-alt { font-weight: 800; color: #8ad0ff; min-height: 1.2em; }
+#kite-dist { font-weight: 700; font-size: 0.95rem; opacity: 0.9; }
+#kite-msg { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 2.4rem; text-shadow: 0 4px 14px rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s; white-space: nowrap; }
+#kite-msg.show { opacity: 1; }
+#kite-msg.big { font-size: 6rem; color: #ffd23f; }
+#kite-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 7px 16px; border-radius: 14px; background: rgba(0,0,0,0.55); font-weight: 700; font-size: 0.95rem; color: #ffe9a8; white-space: nowrap; }
+#kite-quit { position: absolute; top: 64px; right: 20px; pointer-events: auto; padding: 8px 14px; border-radius: 8px; background: rgba(0,0,0,0.7); color: #fff; border: 2px solid rgba(255,255,255,0.5); font: 700 0.9rem 'Outfit', sans-serif; cursor: pointer; }
+html.is-mobile #kite-quit { top: 52px; right: max(8px, env(safe-area-inset-right)); padding: 6px 10px; font-size: 12px; }
+html.is-mobile #kite-hint { bottom: 8px; font-size: 11px; white-space: normal; max-width: 60%; text-align: center; }
+html.is-mobile #kite-top { top: 6px; font-size: 1rem; padding: 4px 14px; }
+html.is-mobile #kite-compass { top: 46px; }
+html.is-mobile #kite-msg.big { font-size: 4rem; }
+body.kite-on #mc-attack, body.kite-on #mc-jump, body.kite-on #mc-talk, body.kite-on .mc-look-zone { display: none !important; }
+#choice-box { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); padding: 16px 22px; border-radius: 14px; background: rgba(10,16,34,0.88); border: 2px solid #ffd166; box-shadow: 0 10px 30px rgba(0,0,0,0.55); pointer-events: auto; text-align: center; z-index: 120; font-family: 'Outfit', sans-serif; color: #fff; }
+#choice-text { font-weight: 800; font-size: 1.25rem; margin-bottom: 12px; color: #fff4c9; }
+#choice-btns { display: flex; gap: 14px; justify-content: center; }
+#choice-btns button { padding: 10px 26px; border-radius: 10px; border: 2px solid #ffd166; background: rgba(255,209,102,0.18); color: #fff; font: 800 1.05rem 'Outfit', sans-serif; cursor: pointer; }
+#choice-btns button:hover, #choice-btns button:active { background: rgba(255,209,102,0.5); }
+html.is-mobile #choice-box { bottom: 10px; padding: 10px 16px; }
+html.is-mobile #choice-text { font-size: 1rem; margin-bottom: 8px; }
+body.kite-on #compass, body.kite-on #objective { display: none !important; }
+
 </style>
 </head>
 <body>
@@ -1355,6 +1392,21 @@ html.is-mobile #save-indicator { left: auto !important; right: 50% !important; b
 
             <!-- Transient notification toast (non-blocking) -->
             <div id="game-toast"></div>
+            <div id="talk-prompt" class="hidden"></div>
+
+            <!-- Iolana's Kite Ring Race: the on-screen timer, ring counter and arrow -->
+            <div id="kite-hud" class="hidden">
+                <div id="kite-top"><span id="kite-time">0.0s</span><span id="kite-rings">0 / 12</span><span id="kite-best"></span></div>
+                <div id="kite-compass"><div id="kite-arrow">▲</div><div id="kite-alt"></div><div id="kite-dist"></div></div>
+                <div id="kite-msg"></div>
+                <div id="kite-hint"></div>
+                <button id="kite-quit">✕ Quit race</button>
+            </div>
+            <!-- A little yes / no question (used by Iolana's race offer) -->
+            <div id="choice-box" class="hidden">
+                <div id="choice-text"></div>
+                <div id="choice-btns"><button id="choice-yes">Yes</button><button id="choice-no">No</button></div>
+            </div>
         </div>
 
         <!-- Mobile Controls Overlay (Hidden by default via CSS) -->
@@ -2354,6 +2406,7 @@ const Animations = (() => {
         const P = r.parts;
         if (P.staff_loop && P.hem) r.kind = 'king';
         else if (P.arm_l && P.head) r.kind = 'human';
+        else if (P.head && P.scarf) r.kind = 'villager';          // (the villagers of Makani: a head and a fluttering scarf, no swinging arms)
         else if (P.tail_0 && P.pinch_l) r.kind = 'scortus';
         else if (P.pinch_l) r.kind = 'crab';
         else if (P.sseg_0 && P.sseg_1) r.kind = 'snake';
@@ -2622,6 +2675,23 @@ const Animations = (() => {
         return bob;
     }
 
+    // ---------------------------------------------------------------- villagers: breathe, watch you, nod while talking, scarf in the wind
+    function villager(g, r, dt, c) {
+        const t = r.t, off = r.s.off || (r.s.off = Math.random() * 6);
+        const base = g.userData.baseScale || (g.userData.baseScale = g.scale.x);
+        g.scale.set(base, base * (1 + Math.sin(t * 1.6 + off) * 0.012), base);
+        const head = r.parts.head;
+        if (head) {
+            head.rotation.y = S(r, 'hy', clamp(c.lookYaw || 0, -0.9, 0.9), 6);
+            head.rotation.x = S(r, 'hx', c.talk ? Math.sin(t * 7) * 0.1 : Math.sin(t * 0.8 + off) * 0.02, 10);
+            head.rotation.z = S(r, 'hz', c.talk ? Math.sin(t * 3.1) * 0.05 : 0, 8);
+        }
+        const sc = r.parts.scarf;
+        if (sc) { sc.rotation.x = sc.userData.rest.x + 0.08 + Math.sin(t * 2.2 + off) * 0.12; sc.rotation.z = Math.sin(t * 1.7 + off) * 0.07; }
+        if (r.hurtT >= 0) r.hurtT = -1;
+        return Math.sin(t * 1.3 + off) * 0.02;
+    }
+
     // ---------------------------------------------------------------- fire fish
     function firefish(g, r, dt, c) {
         const t = r.t, moving = (c.speed || 0) > 0.8;
@@ -2670,6 +2740,7 @@ const Animations = (() => {
             case 'king': bob = king(g, r, dt, c); break;
             case 'eel': bob = eel(g, r, dt, c); break;
             case 'firefish': bob = firefish(g, r, dt, c); break;
+            case 'villager': bob = villager(g, r, dt, c); break;
             case 'snake': bob = snake(g, r, dt, c); break;
             case 'scortus': bob = scortus(g, r, dt, c); break;
             default: bob = generic(g, r, dt, c);
@@ -2698,6 +2769,345 @@ const Animations = (() => {
 
     return { ATTACKS, update, attack, hurt, die, isAttacking, faceToward, faceYaw, lookYawTo, rig };
 })();
+
+</script>
+    <script>
+// The villagers of Makani Village. They are in the style of classic "village folk": a big head, a long robe and
+// arms folded in front - but NOT bald, with NO nose, and with outfits that fit the sky (cloud collars, stars,
+// moons, kites, feathers, wind scarves). They can talk: walk up and press E (or tap 💬 on a phone).
+//
+// To change a villager, edit their entry below: look (skin / robe / trim / accent / hair / hairStyle / extra)
+// and what they say (intro = the first conversation, chat = the things they say afterwards).
+const VILLAGERS = [
+    { id: 'kekoa', name: 'Kekoa', title: 'the Elder', skin: '#e8b98a', robe: '#f4f7ff', trim: '#f2c14e', accent: '#f2c14e', hair: '#f2f2f2', hairStyle: 'elder', extra: 'cloudhat', pattern: 'sun',
+      intro: ['Welcome to Makani Village, traveler! I am Kekoa, the eldest of the wind-folk.',
+              'Our roads are made of cloud, and our houses are held up by the sky itself. Mind your step near the edges!',
+              'Say hello to everyone. The wind carries all the news in the sky, and we hear it first.'],
+      chat: ['The wind is gentle today. That is a very good sign.',
+             'Far beyond our village there is a great Stairway of Clouds, guarded by two sky guards: Stratus the calm and Cirro the quick. Be ready when you meet them.',
+             'You came on Wisp, did you not? That cloud is the kindest soul in the whole sky.'] },
+    { id: 'lani', name: 'Lani', title: 'the Cloud Singer', skin: '#f0c6a0', robe: '#8fd0ff', trim: '#ffffff', accent: '#3f8fe8', hair: '#2a1d3a', hairStyle: 'long', extra: 'headband', pattern: 'swirl',
+      intro: ['Hi hi! I am Lani! I sing to the clouds, and the clouds sing back!', 'Listen... can you hear the humming? That is our windmills. Makani always hums.'],
+      chat: ['I wrote a new song today. It goes la la LAAA. It is still a work in progress.', 'Clouds love high notes. Stars love low ones. Everybody has a favorite!'] },
+    { id: 'hoku', name: 'Hoku', title: 'the Stargazer', skin: '#c68a5e', robe: '#27346e', trim: '#b8c4ff', accent: '#ffe27a', hair: '#cfd6ff', hairStyle: 'spiky', extra: 'starpin', pattern: 'stars',
+      intro: ['I am Hoku. I watch the stars from up here. They are so close you could almost pick one!', 'Between us, I think the stars watch us back.'],
+      chat: ['Past the clouds there is a sun that holds all of time inside it. Old stories say there is a gate to it up here.', 'I counted nine hundred stars last night. Then I fell asleep. I will start again tonight.'] },
+    { id: 'iolana', name: 'Iolana', title: 'the Kite Pilot', skin: '#d9a273', robe: '#ff9a5a', trim: '#ffe0b0', accent: '#ff5a7a', hair: '#5a3418', hairStyle: 'bob', extra: 'goggles', pattern: 'sun',
+      intro: ['Iolana here, the best kite pilot in the whole sky! Want to hear my record?', 'Four whole minutes without touching the ground. Not that there is any ground up here. Ha!', 'Oh, and if you want to fly my kite, just talk to me again. I have a race!'],
+      chat: ['I keep thinking about a kite race around the village. Want to try it?', 'The trick to flying is to stop worrying about falling. The clouds will catch you. Mostly.'] },
+    { id: 'malie', name: 'Malie', title: 'the Cloud Gardener', skin: '#f2d0b0', robe: '#cdb8ff', trim: '#ffffff', accent: '#ff8ac0', hair: '#ff9fc4', hairStyle: 'bun', extra: 'flowers', pattern: 'dots',
+      intro: ['Oh, hello. I am Malie. I grow flowers out of fluffy cloud-soil.', 'They only bloom when it is very, very quiet. Please do not sneeze.'],
+      chat: ['Sky flowers taste like peaches and cold air. I would not recommend eating them, but I do.', 'Watering is easy up here. The rain does it for me, whenever I forget.'] },
+    { id: 'aheahe', name: 'Aheahe', title: 'the Feather Messenger', skin: '#b87a52', robe: '#7ae0c8', trim: '#e8fff8', accent: '#1fa890', hair: '#1fa890', hairStyle: 'ponytail', extra: 'feather', pattern: 'swirl',
+      intro: ['Message for you! Well, not really. I just like saying that. I am Aheahe!', 'I carry news between all the sky villages on a single feather. I am very fast. Very, VERY fast.'],
+      chat: ['Everyone is talking about the great cloud that carried a hero up from below. That is you!', 'The last message I delivered said: "Something is stirring above the Sky Kingdom." Nobody knows what yet.'] },
+    { id: 'noelani', name: 'Noelani', title: 'the Mist Weaver', skin: '#f4d6b6', robe: '#ffc9dc', trim: '#fff0f6', accent: '#ffffff', hair: '#e8b84a', hairStyle: 'curly', extra: 'mistscarf', pattern: 'dots',
+      intro: ['Shh, listen. I am Noelani. I weave scarves out of morning mist.', 'Feel that? It is the softest thing in the sky. And it only lasts until noon.'],
+      chat: ['My scarves melt if you hold them too tightly. That is how you know they are real.', 'If you ever need a hug, find a cloud. If you need a scarf, find me.'] },
+    { id: 'mahina', name: 'Mahina', title: 'the Moon Watcher', skin: '#e9c9a8', robe: '#d6dce8', trim: '#8f9ab8', accent: '#e8f0ff', hair: '#101420', hairStyle: 'long', extra: 'moon', pattern: 'moon',
+      intro: ['...Oh. A visitor. I am Mahina. I sleep by day and watch the moon by night.', 'Forgive me if I yawn. The moon keeps very late hours.'],
+      chat: ['I have felt something odd lately, like the whole sky is holding its breath.', 'The moon never talks back, but she is an excellent listener.'] }
+];
+
+// Parts for one villager (feet on y = 0, about 5 tall). `head` and `scarf` hang from pivots so they can move.
+function buildVillagerParts(v) {
+    const P = [], add = (p) => { P.push(p); return p; };
+    const hair = v.hair, skin = v.skin;
+    // feet, robe, trim and sash
+    [-1, 1].forEach(s => add({ shape: 'sphere', size: [0.75, 0.42, 1.0], pos: [s * 0.45, 0.21, 0.15], color: '#5a3a24' }));
+    add({ shape: 'cylinder', size: [2.1, 3.0, 1.6], taper: 0.6, pos: [0, 1.75, 0], color: v.robe, name: 'robe' });
+    add({ shape: 'cylinder', size: [2.14, 0.34, 1.64], pos: [0, 0.34, 0], color: v.trim });
+    add({ shape: 'cylinder', size: [1.62, 0.3, 1.26], pos: [0, 2.0, 0], color: v.accent });
+    add({ shape: 'sphere', size: [1.55, 0.75, 1.25], pos: [0, 3.15, 0], color: v.robe });
+    // arms folded across the chest, with the hands meeting in the middle
+    add({ shape: 'capsule', size: [0.58, 2.1, 0.58], pos: [0, 2.6, 0.62], rot: [0, 0, Math.PI / 2], color: v.robe });
+    add({ shape: 'capsule', size: [0.6, 2.12, 0.6], pos: [0, 2.46, 0.7], rot: [0, 0, Math.PI / 2], color: v.trim });   // the cuffs
+    [-0.38, 0.38].forEach(x => add({ shape: 'sphere', size: [0.42, 0.42, 0.42], pos: [x, 2.52, 1.0], color: skin }));
+    // sky-theme pattern on the robe
+    if (v.pattern === 'stars') [[-0.55, 1.2], [0.5, 0.9], [-0.2, 0.5], [0.6, 1.6], [-0.6, 1.7]].forEach(([x, y]) => add({ shape: 'sphere', size: [0.2, 0.2, 0.1], pos: [x, y, 0.82 - Math.abs(x) * 0.15], color: '#ffe27a', emissive: '#ffcc33' }));
+    if (v.pattern === 'sun') add({ shape: 'sphere', size: [0.75, 0.75, 0.14], pos: [0, 1.25, 0.84], color: '#ffd24a', emissive: '#ffae00' });
+    if (v.pattern === 'swirl') [[0.8, 0.0], [1.15, 0.35], [0.6, -0.3]].forEach(([y, x]) => add({ shape: 'torus', size: [0.7, 0.7, 0.1], pos: [x * 0.8, y + 0.2, 0.84], color: '#ffffff' }));
+    if (v.pattern === 'dots') [[-0.5, 1.3], [0.55, 1.0], [0, 0.7], [-0.4, 0.5], [0.45, 1.6]].forEach(([x, y]) => add({ shape: 'sphere', size: [0.3, 0.3, 0.1], pos: [x, y, 0.82 - Math.abs(x) * 0.15], color: '#ffffff' }));
+    if (v.pattern === 'moon') add({ shape: 'torus', size: [0.9, 0.9, 0.16], pos: [0, 1.4, 0.85], color: '#ffffff', emissive: '#bcd0ff' });
+    // a collar of little clouds round the neck
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; add({ shape: 'sphere', size: [0.5, 0.42, 0.5], pos: [Math.sin(a) * 0.72, 3.5, Math.cos(a) * 0.62], color: '#ffffff' }); }
+    add({ shape: 'cylinder', size: [0.55, 0.35, 0.55], pos: [0, 3.62, 0], color: skin });
+    // the scarf / little cape that flutters in the wind
+    add({ shape: 'capsule', size: [0.9, 2.5, 0.24], pos: [0, 2.5, -0.85], rot: [0.1, 0, 0], color: v.accent, name: 'scarf', pivot: [0, 3.5, -0.75] });
+    // the head: big and round, a single eyebrow, big eyes, a tiny mouth - and NO nose
+    add({ shape: 'sphere', size: [1.55, 1.7, 1.5], pos: [0, 4.35, 0], color: skin, name: 'head', pivot: [0, 3.6, 0] });
+    [-1, 1].forEach(s => {
+        add({ shape: 'sphere', size: [0.42, 0.36, 0.14], pos: [s * 0.4, 4.4, 0.7], color: '#ffffff', follow: 'head' });
+        add({ shape: 'sphere', size: [0.24, 0.3, 0.12], pos: [s * 0.4, 4.38, 0.77], color: v.accent === '#ffffff' ? '#5aa0e8' : v.accent, follow: 'head' });
+        add({ shape: 'sphere', size: [0.12, 0.14, 0.1], pos: [s * 0.4, 4.38, 0.83], color: '#1a1a24', follow: 'head' });
+        add({ shape: 'sphere', size: [0.38, 0.22, 0.1], pos: [s * 0.72, 4.05, 0.66], color: '#ff9a9a', follow: 'head' });   // rosy cheeks
+    });
+    add({ shape: 'capsule', size: [0.16, 1.15, 0.16], pos: [0, 4.72, 0.72], rot: [0, 0, Math.PI / 2], color: hair, follow: 'head' });   // the one long eyebrow
+    add({ shape: 'capsule', size: [0.13, 0.42, 0.12], pos: [0, 3.93, 0.74], rot: [0, 0, Math.PI / 2], color: '#7a3a3a', follow: 'head' });   // a small mouth
+    // hair (everyone has some!)
+    const H = (shape, size, pos, rot) => add({ shape, size, pos, rot, color: hair, follow: 'head' });
+    H('sphere', [1.68, 1.05, 1.62], [0, 4.95, -0.06]);                                                  // the cap of hair
+    if (v.hairStyle === 'bob') { [-1, 1].forEach(s => H('capsule', [0.55, 1.5, 0.6], [s * 0.82, 4.25, -0.1])); }
+    if (v.hairStyle === 'long') { [-1, 1].forEach(s => H('capsule', [0.5, 1.6, 0.55], [s * 0.8, 4.1, -0.1])); H('capsule', [1.5, 2.6, 0.55], [0, 3.8, -0.7]); }
+    if (v.hairStyle === 'spiky') { [[0, 5.65, 0, 0], [-0.55, 5.5, 0, 0.5], [0.55, 5.5, 0, -0.5], [0, 5.5, -0.5, 0], [0, 5.45, 0.45, 0]].forEach(([x, y, z, r]) => H('cone', [0.5, 1.0, 0.5], [x, y, z], [z > 0 ? 0.5 : z < 0 ? -0.5 : 0, 0, r])); }
+    if (v.hairStyle === 'bun') H('sphere', [0.85, 0.85, 0.85], [0, 5.65, -0.25]);
+    if (v.hairStyle === 'ponytail') { H('capsule', [0.5, 1.9, 0.5], [0, 4.0, -1.0], [0.45, 0, 0]); }
+    if (v.hairStyle === 'curly') { for (let i = 0; i < 9; i++) { const a = i / 9 * Math.PI * 2; H('sphere', [0.6, 0.6, 0.6], [Math.sin(a) * 0.85, 4.95 + (i % 2) * 0.25, Math.cos(a) * 0.8 - 0.1]); } }
+    if (v.hairStyle === 'elder') { [-1, 1].forEach(s => H('sphere', [0.55, 0.9, 0.55], [s * 0.8, 4.35, -0.1])); [[0, 3.75, 0.62, 0.6], [-0.38, 3.8, 0.55, 0.45], [0.38, 3.8, 0.55, 0.45], [0, 3.45, 0.5, 0.5]].forEach(([x, y, z, s]) => add({ shape: 'sphere', size: [s, s * 0.9, s * 0.8], pos: [x, y, z], color: '#ffffff', follow: 'head' })); }   // a fluffy cloud beard
+    // the extra bit of sky-theme dress
+    const X = (p) => add(Object.assign({ follow: 'head' }, p));
+    if (v.extra === 'cloudhat') { X({ shape: 'cylinder', size: [1.5, 0.3, 1.5], pos: [0, 5.45, 0], color: v.accent }); X({ shape: 'cone', size: [1.3, 1.7, 1.3], pos: [0, 6.3, 0], color: '#ffffff' }); X({ shape: 'sphere', size: [0.5, 0.5, 0.5], pos: [0, 7.2, 0], color: '#ffffff' }); }
+    if (v.extra === 'headband') { X({ shape: 'cylinder', size: [1.74, 0.22, 1.68], pos: [0, 5.0, -0.02], color: v.accent }); X({ shape: 'sphere', size: [0.55, 0.45, 0.4], pos: [0.62, 5.1, 0.6], color: '#ffffff' }); }
+    if (v.extra === 'starpin') { X({ shape: 'sphere', size: [0.5, 0.14, 0.14], pos: [-0.7, 5.3, 0.55], color: '#ffe27a', emissive: '#ffcc33' }); X({ shape: 'sphere', size: [0.14, 0.5, 0.14], pos: [-0.7, 5.3, 0.55], color: '#ffe27a', emissive: '#ffcc33' }); }
+    if (v.extra === 'goggles') { [-1, 1].forEach(s => X({ shape: 'cylinder', size: [0.62, 0.36, 0.62], pos: [s * 0.42, 5.18, 0.55], rot: [Math.PI / 2 - 0.5, 0, 0], color: '#2a2a3a' })); [-1, 1].forEach(s => X({ shape: 'sphere', size: [0.5, 0.2, 0.5], pos: [s * 0.42, 5.2, 0.7], rot: [Math.PI / 2 - 0.5, 0, 0], color: '#9fe8ff', emissive: '#4ab8e8' })); X({ shape: 'cylinder', size: [1.72, 0.18, 1.66], pos: [0, 5.05, -0.02], color: '#2a2a3a' }); }
+    if (v.extra === 'flowers') { [[0.85, 5.1, 0.35, '#ff7ab0'], [0.95, 4.85, 0.1, '#ffd84a'], [0.7, 5.3, 0.1, '#ffffff'], [0.9, 4.7, 0.4, '#a98aff']].forEach(([x, y, z, c]) => X({ shape: 'sphere', size: [0.34, 0.34, 0.2], pos: [x, y, z], color: c })); }
+    if (v.extra === 'feather') { X({ shape: 'capsule', size: [0.22, 1.7, 0.14], pos: [0.95, 5.55, -0.05], rot: [0, 0, -0.45], color: '#ffffff' }); X({ shape: 'capsule', size: [0.12, 1.2, 0.1], pos: [1.1, 5.5, -0.05], rot: [0, 0, -0.45], color: v.accent }); }
+    if (v.extra === 'mistscarf') { add({ shape: 'sphere', size: [1.5, 0.45, 1.3], pos: [0, 3.3, 0], color: '#ffffff', opacity: 0.8 }); }
+    if (v.extra === 'moon') { add({ shape: 'torus', size: [0.55, 0.55, 0.12], pos: [0, 3.0, 0.8], color: '#e8f0ff', emissive: '#aab8ff' }); }
+    return P;
+}
+
+function buildVillager3D(v) { return VoxelBuilder.buildCharacter(buildVillagerParts(v)); }
+
+</script>
+    <script>
+// Iolana's Kite Ring Race (Makani Village mini-game).
+//
+// Talk to Iolana, say yes, and you take off under a big kite. Fly through all 12 glowing rings before the time runs out:
+//   A / D  (or the stick left / right)  steer         W / S  (stick up / down)  climb / dive         Q  quit
+// Your best time and medal (Bronze / Silver / Gold) are saved with the game.
+const KiteRace = (() => {
+    const RING_COUNT = 12, RING_R = 9.5, SPEED = 38, TURN = 1.7, TIME_LIMIT = 60, COUNTDOWN = 3;
+    const GOLD = 34, SILVER = 45;                       // seconds (a perfect flight takes about 24)
+    const REWARD = [0, 20, 40, 60];                     // coins for reaching Bronze / Silver / Gold (you only get the difference when you improve)
+    const MEDAL = ['', 'Bronze', 'Silver', 'Gold'];
+    let R = null;
+    const $ = (id) => document.getElementById(id);
+    const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; };
+
+    // ---- the kite: four coloured panels, a golden sun, wooden spars, strings and a long wiggly ribbon tail ----
+    function buildKite() {
+        const rig = new THREE.Group();
+        const kite = new THREE.Group(); kite.position.set(0, 9.5, 1.2); kite.rotation.x = 0.35; rig.add(kite);
+        const M = (c, e) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, emissive: e === undefined ? c : e, emissiveIntensity: 0.32, side: THREE.DoubleSide });
+        const tri = (a, b, c, color) => {
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute([a[0], a[1], 0, b[0], b[1], 0, c[0], c[1], 0], 3));
+            g.computeVertexNormals();
+            const m = new THREE.Mesh(g, M(color)); kite.add(m); return m;
+        };
+        const T = [0, 4.8], Rt = [3.6, 0.8], B = [0, -4], L = [-3.6, 0.8], C = [0, 0.8];
+        tri(T, Rt, C, 0xf0627f); tri(Rt, B, C, 0x3f8fe8); tri(B, L, C, 0xf2b236); tri(L, T, C, 0x4cc29a);
+        const sun = new THREE.Mesh(new THREE.CircleGeometry(1.05, 20), M(0xfff2b0, 0xffd86a)); sun.position.set(0, 0.8, 0.03); kite.add(sun);
+        const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a46, roughness: 0.9 });
+        const v = new THREE.Mesh(new THREE.BoxGeometry(0.18, 8.9, 0.18), wood); v.position.set(0, 0.4, 0.05); kite.add(v);
+        const h = new THREE.Mesh(new THREE.BoxGeometry(7.3, 0.18, 0.18), wood); h.position.set(0, 0.8, 0.05); kite.add(h);
+        // the ribbon tail (little bows on a long ribbon) - they wiggle in update()
+        const tail = [], colors = [0xf0627f, 0xf2b236, 0x3f8fe8, 0x4cc29a, 0x8c6cf0, 0xff8a4a, 0xf0627f, 0xf2b236];
+        const ribbon = new THREE.Mesh(new THREE.BoxGeometry(0.1, 15, 0.05), M(0xffffff)); ribbon.position.set(0, -11.4, 0.04); kite.add(ribbon);
+        colors.forEach((c, i) => { const bow = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.7, 0.06), M(c)); bow.position.set(0, -5.3 - i * 1.7, 0.1); kite.add(bow); tail.push(bow); });
+        // strings from your hands up to the kite
+        const line = new THREE.LineBasicMaterial({ color: 0xffffff });
+        [-1, 1].forEach(s => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([s * 0.6, 3.4, -0.1, s * 1.2, 8.1, 0.68], 3)); rig.add(new THREE.Line(g, line)); });
+        rig.userData.tail = tail;
+        return rig;
+    }
+
+    // ---- the course: 12 rings weaving round the village (out over the houses, in toward the windmill, and back) ----
+    function ringPoints(V, a0) {
+        const pts = [];
+        for (let k = 0; k < RING_COUNT; k++) {
+            const ang = a0 + (k + 1) * (Math.PI * 2 / RING_COUNT), r = k % 2 === 0 ? 102 : 66;
+            const y = 17 + 11 * (0.5 + 0.5 * Math.sin(k * 0.85)) + (k % 2 ? 3 : 0);
+            pts.push(new THREE.Vector3(V.x + Math.sin(ang) * r, y, V.z + Math.cos(ang) * r));
+        }
+        return pts;
+    }
+
+    function buildRings(pts, start) {
+        const group = new THREE.Group(), rings = [];
+        const geo = new THREE.TorusGeometry(RING_R - 1, 0.85, 8, 36);
+        pts.forEach((p, i) => {
+            const m = new THREE.MeshBasicMaterial({ color: 0x8ad0ff, transparent: true, opacity: 0.6, fog: false, depthWrite: false });
+            const mesh = new THREE.Mesh(geo, m); mesh.position.copy(p);
+            const prev = i === 0 ? start : pts[i - 1], dir = p.clone().sub(prev).normalize();
+            mesh.lookAt(p.clone().add(dir));                       // the ring faces the way you fly through it
+            group.add(mesh); rings.push({ mesh, mat: m, done: false, fade: 0 });
+        });
+        const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 140, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe27a, transparent: true, opacity: 0.32, fog: false, depthWrite: false, side: THREE.DoubleSide }));
+        group.add(beam);
+        return { group, rings, beam };
+    }
+
+    function say(text, big) { const m = $('kite-msg'); if (!m) return; m.textContent = text; m.classList.toggle('big', !!big); m.classList.toggle('show', !!text); }
+
+    // ---- start / update / end ----
+    function begin(ent) {
+        const ow = overworld3d, gs = gameSystem, V = MAKANI;
+        if (R || !ow.playerObj) return;
+        const p = ow.playerObj.position;
+        const start = new THREE.Vector3(p.x, 0, p.z);
+        const a0 = Math.atan2(p.x - V.x, p.z - V.z);
+        const pts = ringPoints(V, a0), course = buildRings(pts, start.clone().setY(14));
+        const rig = buildKite();
+        ow.scene.add(course.group); ow.scene.add(rig);
+        R = {
+            t: 0, clock: 0, phase: 'count', pts, rings: course.rings, beam: course.beam, courseGroup: course.group, rig,
+            pos: start.clone(), yaw: Math.atan2(-(pts[0].x - start.x), -(pts[0].z - start.z)), pitch: 0, bank: 0, next: 0,
+            back: { pos: p.clone(), rotY: ow.playerObj.rotation.y, quat: ow.camera.quaternion.clone(), cam: ow.camera.position.clone() }, warned: false, lastCount: 4
+        };
+        ow.kite = R;
+        gs.state = 'kite';
+        const tp = $('talk-prompt'); if (tp) tp.classList.add('hidden');
+        ow.nearVillager = null;
+        if (ow.controls && ow.controls.isLocked) ow.controls.unlock();
+        document.body.classList.add('kite-on');
+        $('kite-hud').classList.remove('hidden');
+        $('kite-hint').textContent = window.IS_MOBILE ? 'Left thumb: steer left / right, push up to climb, down to dive' : 'A / D steer   ·   W climb   ·   S dive   ·   Q quit';
+        $('kite-best').textContent = ow.kiteBest ? '🏅 Best ' + ow.kiteBest.toFixed(1) + 's' : '';
+        Sound.play('levelup');
+        place(0.001, true);
+        update(0.001);
+    }
+
+    // put the kite, the player and the camera where the flight says they are
+    function place(dt, snap) {
+        const ow = overworld3d, r = R, pos = r.pos;
+        r.rig.position.copy(pos); r.rig.rotation.order = 'YXZ'; r.rig.rotation.set(r.pitch * 0.6, r.yaw, r.bank);
+        ow.playerObj.position.copy(pos); ow.playerObj.rotation.set(0, r.yaw + Math.PI, 0);
+        if (ow.companionObj) ow.companionObj.visible = false;
+        const fx = -Math.sin(r.yaw), fz = -Math.cos(r.yaw);
+        const target = new THREE.Vector3(pos.x - fx * 23, pos.y + 9 - r.pitch * 7, pos.z - fz * 23);
+        if (snap) ow.camera.position.copy(target); else ow.camera.position.lerp(target, 1 - Math.exp(-dt * 5));
+        ow.camera.lookAt(pos.x + fx * 12, pos.y + 5 + r.pitch * 4, pos.z + fz * 12);
+    }
+
+    function update(delta) {
+        if (!R) return;
+        const ow = overworld3d, r = R, dt = Math.min(delta, 0.05), V = MAKANI;
+        r.t += dt;
+        if (gameSystem.state !== 'kite') gameSystem.state = 'kite';   // (nothing else may take over while you fly)
+        const k = ow.keys, st = ow.stick;
+        let steer = 0, climb = 0;                                     // steer > 0 = turn left
+        if (k['a'] || k['arrowleft']) steer += 1;
+        if (k['d'] || k['arrowright']) steer -= 1;
+        if (k['w'] || k['arrowup']) climb += 1;
+        if (k['s'] || k['arrowdown']) climb -= 1;
+        if (st && st.active) { steer = -st.x; climb = st.y; }
+
+        if (r.phase === 'count') {
+            const left = COUNTDOWN - r.t, e = Math.min(1, r.t / COUNTDOWN);
+            r.pos.y = 14 * e * e * (3 - 2 * e);                       // the kite lifts off the ground
+            r.pitch = 0; r.bank = Math.sin(r.t * 2) * 0.06;
+            const n = Math.ceil(left);
+            if (left > 0) { if (n !== r.lastCount) { r.lastCount = n; say(String(n), true); Sound.play('click'); } }
+            else { r.phase = 'fly'; r.clock = 0; say('GO!', true); r.goAt = r.t; Sound.play('levelup'); }
+        } else {
+            r.clock += dt;
+            if (r.goAt !== undefined && r.t - r.goAt > 0.9) { r.goAt = undefined; say(''); }
+            r.yaw += steer * TURN * dt;
+            r.pitch += (climb * 0.5 - r.pitch) * Math.min(1, dt * 3);
+            const speed = SPEED * (1 - 0.2 * r.pitch / 0.5);
+            r.pos.x += -Math.sin(r.yaw) * Math.cos(r.pitch) * speed * dt;
+            r.pos.z += -Math.cos(r.yaw) * Math.cos(r.pitch) * speed * dt;
+            r.pos.y += Math.sin(r.pitch) * speed * dt;
+            if (r.pos.y < 5) { r.pos.y = 5; if (r.pitch < 0) r.pitch = 0; }
+            if (r.pos.y > 62) { r.pos.y = 62; if (r.pitch > 0) r.pitch = 0; }
+            const dx = V.x - r.pos.x, dz = V.z - r.pos.z;
+            if (Math.hypot(dx, dz) > 138) {                           // the wind gently turns you back toward the village
+                const diff = wrap(Math.atan2(-dx, -dz) - r.yaw);
+                r.yaw += Math.max(-2.2 * dt, Math.min(2.2 * dt, diff));
+                if (!r.warned) { r.warned = true; gameSystem.showToast('The wind is turning you back toward Makani!'); }
+            } else r.warned = false;
+            r.bank += (steer * 0.45 - r.bank) * Math.min(1, dt * 4);
+
+            // flying through a ring?
+            const ring = r.rings[r.next];
+            if (ring && r.pos.distanceTo(r.pts[r.next]) < RING_R) {
+                ring.done = true; ring.fade = 1; ring.mat.color.setHex(0x7dff9c); r.next++;
+                Sound.play('coin');
+                if (r.next >= RING_COUNT) { finish(); return; }
+                say(r.next === RING_COUNT - 1 ? 'Last ring!' : '');
+                if (r.next === RING_COUNT - 1) setTimeout(() => { if (R === r) say(''); }, 1400);
+            }
+            if (TIME_LIMIT - r.clock <= 0) { end('timeout'); return; }
+        }
+        // the rings: the next one glows gold and pulses, passed ones pop and fade, the rest wait
+        r.rings.forEach((g, i) => {
+            if (g.done) { g.fade = Math.max(0, g.fade - dt * 2.2); g.mesh.visible = g.fade > 0; g.mesh.scale.setScalar(1 + (1 - g.fade) * 0.6); g.mat.opacity = g.fade * 0.8; return; }
+            if (i === r.next) { g.mat.color.setHex(0xffd23f); g.mat.opacity = 0.95; g.mesh.scale.setScalar(1 + Math.sin(r.t * 6) * 0.07); }
+            else { g.mat.color.setHex(i === r.next + 1 ? 0xb9e6ff : 0x8ad0ff); g.mat.opacity = i === r.next + 1 ? 0.7 : 0.4; g.mesh.scale.setScalar(1); }
+        });
+        const nx = r.pts[Math.min(r.next, RING_COUNT - 1)];
+        r.beam.position.set(nx.x, nx.y + 62, nx.z); r.beam.visible = r.next < RING_COUNT;
+        r.rig.userData.tail.forEach((b, i) => { b.position.x = Math.sin(r.t * 5 - i * 0.8) * (0.5 + i * 0.28); b.rotation.z = Math.sin(r.t * 5 - i * 0.8) * 0.5; });
+        place(dt, false);
+        hud();
+    }
+
+    function hud() {
+        const r = R, tl = Math.max(0, TIME_LIMIT - r.clock);
+        const t = $('kite-time'); t.textContent = '⏱ ' + r.clock.toFixed(1) + 's'; t.classList.toggle('low', r.phase === 'fly' && tl < 10);
+        $('kite-rings').textContent = '◯ ' + Math.min(r.next, RING_COUNT) + ' / ' + RING_COUNT;
+        const target = r.pts[Math.min(r.next, RING_COUNT - 1)];
+        const dx = target.x - r.pos.x, dz = target.z - r.pos.z, dy = target.y - r.pos.y;
+        const diff = wrap(Math.atan2(-dx, -dz) - r.yaw);                // > 0: the ring is to your left
+        $('kite-arrow').style.transform = 'rotate(' + (-diff * 180 / Math.PI).toFixed(0) + 'deg)';
+        const alt = $('kite-alt'); alt.textContent = dy > 7 ? '▲ climb' : dy < -7 ? '▼ dive' : '';
+        $('kite-dist').textContent = Math.round(Math.hypot(dx, dz, dy)) + ' m';
+    }
+
+    function finish() {
+        const r = R, time = r.clock, ow = overworld3d, gs = gameSystem;
+        const medal = time <= GOLD ? 3 : time <= SILVER ? 2 : 1;
+        const prevMedal = ow.kiteMedal || 0, prevBest = ow.kiteBest;
+        const coins = medal > prevMedal ? REWARD[medal] - REWARD[prevMedal] : 5;
+        const newBest = prevBest == null || time < prevBest;
+        ow.kiteMedal = Math.max(prevMedal, medal); if (newBest) ow.kiteBest = time;
+        gs.coins += coins;
+        end('win');
+        gs.updateHUD();
+        Sound.play('fanfare');
+        const who = 'Iolana, the Kite Pilot';
+        const lines = [];
+        lines.push(`${time.toFixed(1)} seconds! That is a ${MEDAL[medal].toUpperCase()} flight!` + (newBest && prevBest != null ? ' And a new personal best!' : ''));
+        lines.push(medal === 3 ? 'Gold! You fly better than me. Do not tell anyone I said that. Here, take ' + coins + ' coins!'
+            : medal === 2 ? 'Nearly gold! Get under ' + GOLD + ' seconds and I will give you the big prize. Here are ' + coins + ' coins!'
+            : 'You made it round! Try for ' + SILVER + ' seconds next time, or even ' + GOLD + '. Here are ' + coins + ' coins for flying!');
+        gs.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
+        gs.showDialogue(who, lines[0]);
+        gs.showToast('🪁 Kite Race: ' + MEDAL[medal] + ' · +' + coins + ' coins');
+        setTimeout(() => { if (window.SaveGame) SaveGame.autosave(); }, 800);
+    }
+
+    // reason: 'quit' | 'timeout' | 'win'
+    function end(reason) {
+        if (!R) return;
+        const ow = overworld3d, gs = gameSystem, r = R, got = r.next;
+        R = null; ow.kite = null;
+        ow.scene.remove(r.rig); ow.scene.remove(r.courseGroup);
+        $('kite-hud').classList.add('hidden'); say('');
+        document.body.classList.remove('kite-on');
+        ow.playerObj.position.copy(r.back.pos); ow.playerObj.rotation.set(0, r.back.rotY, 0);
+        ow.camera.quaternion.copy(r.back.quat); ow.camera.position.copy(r.back.cam);
+        ow.velocityY = 0; ow.isJumping = false; ow.isGliding = false; ow.grounded = true;
+        if (ow.companionObj) { ow.companionObj.visible = true; ow.companionObj.position.set(r.back.pos.x + 4, r.back.pos.y, r.back.pos.z + 3); ow.compBaseY = undefined; }
+        gs.state = 'overworld';
+        ow.updateCulling();
+        if (reason === 'timeout') {
+            Sound.play('error');
+            const who = 'Iolana, the Kite Pilot';
+            gs.dialogueQueue = [{ speaker: who, text: 'Do not worry. Even the wind misses a turn now and then. Talk to me whenever you want another go!' }];
+            gs.showDialogue(who, 'Time is up! You flew through ' + got + ' of ' + RING_COUNT + ' rings. So close!');
+        } else if (reason === 'quit') gs.showToast('Kite race cancelled.');
+    }
+
+    document.addEventListener('keydown', (e) => { if (R && e.key.toLowerCase() === 'q' && !e.repeat) end('quit'); });
+    window.addEventListener('DOMContentLoaded', () => { const q = $('kite-quit'); if (q) q.addEventListener('click', () => end('quit')); });
+
+    return { begin, update, end, get active() { return !!R; }, GOLD, SILVER, TIME_LIMIT, RING_COUNT };
+})();
+window.KiteRace = KiteRace;
 
 </script>
     <script>
@@ -2917,6 +3327,7 @@ const Sound = (() => {
         reef:    { bpm: 92,  root: 62, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [-5, -1, 2, 6], [-3, 0, 4, 7], [-7, -3, 0, 4]], mel: 0.5, pluck: 'bell', padLp: 800, drone: true },
         core:    { bpm: 138, root: 43, scale: [0, 2, 3, 7, 8, 10], prog: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-7, -4, 0]], mel: 0.6, pluck: 'sawtooth', padLp: 600, drums: true, padType: 'sawtooth', drone: true },
         dunes:   { bpm: 84,  root: 57, scale: [0, 1, 4, 5, 7, 8, 10], prog: [[0, 4, 7], [1, 5, 8], [0, 4, 7], [-2, 2, 5]], mel: 0.36, pluck: 'triangle', padLp: 700, drone: true, thump: false },
+        sky:     { bpm: 88,  root: 65, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [5, 9, 12], [7, 11, 14], [4, 7, 11]], mel: 0.5, pluck: 'bell', padLp: 1500, arp: true },
         flow:    { bpm: 104, root: 64, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7], [-3, 0, 4], [-8, -4, -1], [-5, -1, 2]], mel: 0.7, pluck: 'sine', padLp: 1200, arp: true },
     };
 
@@ -3017,6 +3428,7 @@ const Sound = (() => {
         else if (mood === 'reef') { f = 320; v = 0.1; q = 0.7; }
         else if (mood === 'core') { f = 120; v = 0.08; q = 0.9; }
         else if (mood === 'dunes') { f = 900; v = 0.12; q = 0.35; }   // hot wind across open sand
+        else if (mood === 'sky') { f = 1100; v = 0.1; q = 0.3; }   // high, clean wind above the clouds
         else if (mood === 'sea') { f = 450; v = 0.09; q = 0.5; }
         else if (mood === 'temple' || mood === 'boss') { f = 260; v = 0.05; q = 1; }
         else if (mood === 'gauntlet') { f = 150; v = 0.1; }
@@ -3855,6 +4267,11 @@ const VILLAGE = { x: 0, z: DESERT_END_Z + 105 };
 const QUICKSAND = { x: -38, z: VILLAGE.z - 30, r: 9 };
 // Boat voyage: a small stretch of open sea, built far off to the side of the world (only used in the cutscene)
 const SEA = { x: 1400, z: -760 };
+// The Sky Kingdom (Chapter 4): a cloud city far off to the side, reached by riding a giant friendly cloud. (Its z is past the dunes so dune hills never reach it.)
+const SKY = { x: -2200, z: DESERT_END_Z - 600 };
+const SKY_RADIUS = 150;
+// Makani Village (Chapter 4): a village of cloud roads and houses held up by clouds, a long cloud road north of the cloud city.
+const MAKANI = { x: SKY.x, z: SKY.z - 340 };
 
 class Overworld3D {
     constructor() {
@@ -3927,6 +4344,8 @@ class Overworld3D {
         this.arenaTriggered = false;      // Oblongtalo's challenge has started
         this.reefReached = false;         // the wave has carried the player into the Coral Reef
         this.desertReached = false;       // Oblongtalo sent the player to the Dunes of Force (Chapter 3)
+        this.metVillagers = new Set();    // Makani villagers you have talked to
+        this.nearVillager = null; this.talkingTo = null;
         this.desertEndTriggered = false;
         this.dunes = [];                  // the shifting dunes
         this.voyage = null;               // the boat cutscene, while it runs
@@ -4213,6 +4632,12 @@ class Overworld3D {
             this.motes.geometry.attributes.position.needsUpdate = true;
             this.motes.material.color.copy(this.moteColorCoast).lerp(this.moteColorOcean, ocean);
         }
+        this.updateTalkPrompt();
+        if (this.skyReached && this.makaniVanes) this.makaniVanes.forEach(v => { v.g.rotation.z = v.ph + t * v.sp; });   // windmills and pinwheels
+        if (this.skyReached && this.skyCloud && this.skyCloud.visible && !this.skyRide) {   // the parked cloud bobs gently
+            this.skyCloud.position.y = 3.4 + Math.sin(t * 1.3) * 0.35;
+            this.animateSkyCloud(this.skyCloud, t, 0.5);
+        }
         if (this.desertReached) {
             this.updateDunes();
             const q = this.quicksand;
@@ -4307,6 +4732,10 @@ class Overworld3D {
         this.desertFogColor = new THREE.Color(0xf2dba8); this.desertSkyTop = new THREE.Color(0x6bb3ea);
         this.hemiSkyDesert = new THREE.Color(0xfff2d6);  this.hemiGroundDesert = new THREE.Color(0xd9ab62);
         this.sunDesert = new THREE.Color(0xffe2a0);
+        // The Sky Kingdom: a bright, clean, airy blue day high above the clouds
+        this.skyFogColor = new THREE.Color(0xeaf4ff);    this.skySkyTop = new THREE.Color(0x3d9cf2);
+        this.hemiSkyAir = new THREE.Color(0xffffff);     this.hemiGroundAir = new THREE.Color(0xb9d4f2);
+        this.sunAir = new THREE.Color(0xfff8e6);
 
         // ---- Clean ground in uniform bands: grass coast -> sandy beach -> ocean floor ----
         const makeGround = (zNorth, zSouth, tex) => {
@@ -4362,6 +4791,8 @@ class Overworld3D {
             base: '#e3c079', light: '#f6e2ad', dark: '#c79a52', blades: false, ripples: true,
             patches: ['#efd18d', '#d9ae62', '#c99a52', '#f3dca4', '#b98a48', '#e8c77f']
         }));
+        this.buildSkyKingdom();   // (Chapter 4 goes last, too)
+        this.buildMakaniVillage();
 
         // Record every small top-level prop so we can hide the ones far beyond the fog each frame
         // (big things like the ground, temple and cliff walls are left alone).
@@ -4385,6 +4816,7 @@ class Overworld3D {
         let mood = 'wild';
         if (gs.state === 'gauntlet' || this.oblongtaloMesh) mood = 'gauntlet';
         else if (croton && Math.hypot(p.x - croton.mesh.position.x, p.z - croton.mesh.position.z) < 45) mood = 'boss';
+        else if (this.skyReached) mood = 'sky';
         else if (this.desertReached) mood = 'dunes';
         else if (this.reefReached && p.z < REEF_START_Z + 30 && p.z > REEF_END_Z - 6) mood = 'reef';
         else if (p.z < WORLD.oceanStartZ + 12) mood = 'ocean';
@@ -6416,6 +6848,433 @@ class Overworld3D {
     }
 
     // =====================================================================================
+    //  CHAPTER 4: THE SKY KINGDOM  (a cloud city, reached by riding a giant friendly cloud)
+    // =====================================================================================
+
+    // The cloud city: a round cloud with a plaza, a fountain, white towers with colourful roofs, cottages and floating islands.
+    buildSkyKingdom() {
+        const g = this.worldGroup, C = SKY;
+        const M = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.92 }, extra));
+        const cloudMat = M(0xffffff, { emissive: 0xd4e4f8, emissiveIntensity: 0.65 });
+        const stone = M(0xf4f1ec), band = M(0xc3d4ee), rock = M(0x8f9aa8, { flatShading: true });
+        const glass = M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.9 });
+        const water = M(0x8fdcff, { emissive: 0x3aa8e8, emissiveIntensity: 0.8, roughness: 0.2 });
+        const roofs = [0x4aa3e8, 0xf07aa8, 0x7ad0c0, 0xf2b84a, 0x9a86e8].map(c => M(c, { roughness: 0.6 }));
+        const sphere = new THREE.SphereGeometry(1, 14, 10);
+        const put = (mesh, x, y, z, parent) => { mesh.position.set(x, y, z); parent.add(mesh); return mesh; };
+        const mesh = (geo, mat) => new THREE.Mesh(geo, mat);
+
+        // --- the round cloud itself, a soft underside, and an endless sea of clouds far below ---
+        const tex = this.makeGroundTexture({ base: '#f6faff', light: '#ffffff', dark: '#d3e3f6', blades: false, patches: ['#eaf3ff', '#dcebfb', '#fdfdff', '#cfe0f5', '#f3ecff'] });
+        tex.repeat.set(300 / 70, 300 / 70); this._skyTex = tex;
+        const floor = mesh(new THREE.CircleGeometry(SKY_RADIUS + 2, 56), new THREE.MeshStandardMaterial({ map: tex, roughness: 1, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.5 }));
+        floor.rotation.x = -Math.PI / 2; floor.position.set(C.x, 0, C.z); floor.receiveShadow = true; g.add(floor);
+        const under = mesh(sphere, cloudMat); under.scale.set(SKY_RADIUS, 40, SKY_RADIUS); under.position.set(C.x, -42, C.z); g.add(under);
+        const sea = mesh(new THREE.PlaneGeometry(3600, 3600), M(0x8fbbea, { emissive: 0x5f93d0, emissiveIntensity: 0.55, roughness: 1 }));
+        sea.rotation.x = -Math.PI / 2; sea.position.set(C.x, -75, C.z); g.add(sea);
+        // fluffy puffs: a ring round the rim of the city, and lumps scattered over the cloud sea (one draw call)
+        const RIM = 48, FAR = 150, N = RIM + FAR, puffs = new THREE.InstancedMesh(sphere, cloudMat, N), m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+        for (let i = 0; i < N; i++) {
+            let x, y, z, s;
+            if (i < RIM) { const a = i / RIM * Math.PI * 2 + Math.random() * 0.1; s = 7 + Math.random() * 8; x = Math.cos(a) * (SKY_RADIUS - 2); z = Math.sin(a) * (SKY_RADIUS - 2); y = Math.random() * 3; }
+            else { const a = Math.random() * Math.PI * 2, r = 190 + Math.random() * 800; s = 25 + Math.random() * 45; x = Math.cos(a) * r; z = Math.sin(a) * r; y = -85 + Math.random() * 28; }
+            m4.compose(new THREE.Vector3(C.x + x, y, C.z + z), q, new THREE.Vector3(s, s * 0.55, s)); puffs.setMatrixAt(i, m4);
+        }
+        puffs.frustumCulled = false; g.add(puffs);
+
+        // --- the central plaza and the cloud fountain ---
+        const plaza = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(30, 31, 0.8, 40), stone), 0, 0.4, 0, plaza);
+        put(mesh(new THREE.TorusGeometry(30.5, 0.7, 8, 48), band), 0, 0.8, 0, plaza).rotation.x = Math.PI / 2;
+        plaza.position.set(C.x, 0, C.z); g.add(plaza);
+        const fountain = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(7, 7.6, 1.6, 24), band), 0, 1.6, 0, fountain);
+        put(mesh(new THREE.CylinderGeometry(6, 6, 0.3, 24), water), 0, 2.45, 0, fountain);
+        put(mesh(new THREE.CylinderGeometry(1, 1.5, 6, 12), stone), 0, 5, 0, fountain);
+        const orb = put(mesh(new THREE.SphereGeometry(1.8, 16, 12), water), 0, 9, 0, fountain);
+        put(mesh(new THREE.TorusGeometry(3, 0.25, 6, 24), glass), 0, 9, 0, fountain).rotation.x = Math.PI / 2.4;
+        this.addProp(fountain, C.x, C.z, { shrink: 0.5 });
+        this.skyOrb = orb;
+
+        // --- the landing pad where the giant cloud sets you down (south edge of the city) ---
+        const pad = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(15, 15.5, 0.7, 36), stone), 0, 0.35, 0, pad);
+        put(mesh(new THREE.TorusGeometry(12.5, 0.4, 6, 40), glass), 0, 0.75, 0, pad).rotation.x = Math.PI / 2;
+        put(mesh(new THREE.TorusGeometry(7, 0.3, 6, 32), band), 0, 0.75, 0, pad).rotation.x = Math.PI / 2;
+        pad.position.set(C.x, 0, C.z + 96); g.add(pad);
+
+        // --- white towers with colourful cone roofs, and little round cottages, ringed round the plaza ---
+        const tower = (r, h, roof) => {
+            const t = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(r, r * 1.08, h, 14), stone), 0, h / 2, 0, t);
+            put(mesh(new THREE.CylinderGeometry(r * 1.12, r * 1.12, 0.8, 14), band), 0, h * 0.55, 0, t);
+            put(mesh(new THREE.ConeGeometry(r * 1.4, r * 1.9, 14), roof), 0, h + r * 0.95, 0, t);
+            for (let k = 0; k < 3; k++) { const a = k * 2.1 + 0.4; const w = put(mesh(new THREE.BoxGeometry(0.9, 1.7, 0.3), glass), Math.sin(a) * r, h * (0.7 - (k % 2) * 0.28), Math.cos(a) * r, t); w.rotation.y = a; }
+            return t;
+        };
+        const cottage = (r, roof) => {
+            const t = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(r, r * 1.05, 5, 12), stone), 0, 2.5, 0, t);
+            const dome = put(mesh(sphere, roof), 0, 5, 0, t); dome.scale.set(r * 1.25, r * 0.9, r * 1.25);
+            put(mesh(new THREE.BoxGeometry(1.5, 2.6, 0.3), glass), 0, 1.3, r, t);
+            return t;
+        };
+        for (let i = 0; i < 18; i++) {
+            const a = i / 18 * Math.PI * 2 + 0.17, ring = i % 3, rr = 58 + ring * 24 + Math.random() * 6;
+            const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+            if (Math.abs(x) < 17 && Math.abs(z) > 8) continue;      // keep the roads open: south to the landing pad, north to Makani Village
+            const b = ring === 1 ? cottage(3.6 + Math.random() * 1.2, roofs[i % 5]) : tower(4.6 + Math.random() * 2, 14 + Math.random() * 16, roofs[(i + 2) % 5]);
+            b.rotation.y = -a + Math.PI / 2;
+            this.addProp(b, C.x + x, C.z + z, { shrink: 0.4 });
+        }
+        this.buildSignpost(C.x + 11, C.z + 84, ['Sky Kingdom', 'Cloud City: ahead']);
+
+        // --- little floating islands drifting around the city (just for the view) ---
+        for (let i = 0; i < 7; i++) {
+            const isl = new THREE.Group(), a = i / 7 * Math.PI * 2 + 0.4, rr = 215 + (i % 3) * 30, s = 0.7 + Math.random() * 0.8;
+            const cone = put(mesh(new THREE.ConeGeometry(14, 20, 7), rock), 0, -10, 0, isl); cone.rotation.x = Math.PI;
+            put(mesh(new THREE.CylinderGeometry(15, 14, 2.4, 14), stone), 0, 1.2, 0, isl);
+            if (i % 2 === 0) put(mesh(new THREE.CylinderGeometry(2.6, 3, 9, 10), stone), 0, 6.5, 0, isl); put(mesh(new THREE.ConeGeometry(3.6, 5, 10), roofs[i % 5]), 0, i % 2 === 0 ? 13.5 : 4.5, 0, isl);
+            isl.scale.setScalar(s); isl.position.set(C.x + Math.cos(a) * rr, 14 + (i * 13) % 42, C.z + Math.sin(a) * rr);
+            const ix = isl.position.x, iz = isl.position.z;   // (keep the view-only islands out of Makani Village and its road)
+            if (Math.hypot(ix - MAKANI.x, iz - MAKANI.z) > 170 && !(Math.abs(ix - C.x) < 80 && iz < C.z - 100 && iz > MAKANI.z - 20)) g.add(isl);
+        }
+    }
+
+    // =====================================================================================
+    //  MAKANI VILLAGE (Chapter 4): a wind village of cloud roads and houses held up by clouds
+    // =====================================================================================
+
+    // A villager of Makani: a few merged meshes (static body, the head, the scarf), standing on the cloud.
+    spawnVillager(v, x, z, yaw) {
+        const mesh = buildVillager3D(v);
+        const head = mesh.getObjectByName('head'), scarf = mesh.getObjectByName('scarf');
+        if (head) this.mergeGroup(head, { own: true, castShadow: false });
+        if (scarf) this.mergeGroup(scarf, { own: true, castShadow: false });
+        this.mergeGroup(mesh, { own: true, castShadow: false, exclude: [head, scarf].filter(Boolean) });
+        mesh.scale.setScalar(0.95); mesh.position.set(x, 0, z); mesh.rotation.y = yaw;
+        this.scene.add(mesh);
+        this.entities.push({ type: 'villager', mesh, v, radius: 6 });
+        this.colliders.push(new THREE.Box3(new THREE.Vector3(x - 1.1, 0, z - 1.1), new THREE.Vector3(x + 1.1, 5, z + 1.1)));
+    }
+
+    // Find the villager you're standing next to (so you can talk) and show / hide the "press E" hint.
+    updateTalkPrompt() {
+        const gs = window.gameSystem, el = document.getElementById('talk-prompt');
+        let near = null;
+        if (this.skyReached && this.playerObj && gs.state === 'overworld' && !gs.isCutscene && !this.skyRide && !this.voyage) {
+            const p = this.playerObj.position; let best = 49;
+            for (const e of this.entities) {
+                if (e.type !== 'villager' || !e.mesh.visible) continue;
+                const dx = e.mesh.position.x - p.x, dz = e.mesh.position.z - p.z, d2 = dx * dx + dz * dz;
+                if (d2 < best) { best = d2; near = e; }
+            }
+        }
+        this.nearVillager = near;
+        if (el) {
+            if (near && !this.isMobile) { el.textContent = '💬  Press E to talk to ' + near.v.name; el.classList.remove('hidden'); }
+            else el.classList.add('hidden');
+        }
+    }
+
+    // Talk to the villager next to you (the E key, or the 💬 button on a phone).
+    tryTalk() {
+        const e = this.nearVillager, gs = window.gameSystem;
+        if (!e || gs.state !== 'overworld' || gs.isCutscene) return;
+        this.talkingTo = e;
+        gs.talkToVillager(e);
+    }
+
+    // Can the player stand here? The city's round cloud, the cloud road, and every cloud of Makani Village.
+    skyWalkable(x, z) {
+        if (Math.hypot(x - SKY.x, z - SKY.z) < SKY_RADIUS - 6) return true;
+        const sh = this.skyShapes;
+        if (!sh) return false;
+        for (let i = 0; i < sh.length; i++) {
+            const a = sh[i];
+            if (a.t === 0) { if (Math.hypot(x - a.x, z - a.z) < a.r - 1.5) return true; }
+            else {
+                const vx = a.bx - a.ax, vz = a.bz - a.az, l2 = vx * vx + vz * vz;
+                const u = Math.max(0, Math.min(1, ((x - a.ax) * vx + (z - a.az) * vz) / l2));
+                if (Math.hypot(x - (a.ax + vx * u), z - (a.az + vz * u)) < a.hw - 1.2) return true;
+            }
+        }
+        return false;
+    }
+
+    buildMakaniVillage() {
+        const g = this.worldGroup, V = MAKANI, C = SKY, rnd = Math.random;
+        const M = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.9 }, extra));
+        const tex = this._skyTex;
+        const layer = (off) => new THREE.MeshStandardMaterial({ map: tex, roughness: 1, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: off, polygonOffsetUnits: off });
+        const roadMat = layer(-1), plotMat = layer(-2), plazaMat = layer(-3);
+        const cloudMat = M(0xffffff, { emissive: 0xd4e4f8, emissiveIntensity: 0.65 });
+        const stone = M(0xf4f1ec), band = M(0xc3d4ee);
+        const pastel = [0xffd6e0, 0xcdeaff, 0xfff0b8, 0xd6f5d6, 0xe6d9ff, 0xffe0c4, 0xc9f2ee, 0xf7d3f0];
+        const roofC = [0xf0627f, 0x3f8fe8, 0xf2b236, 0x4cc29a, 0x8c6cf0, 0xff8a4a, 0x2fb5c4, 0xd860c8];
+        const sphere = new THREE.SphereGeometry(1, 12, 9);
+        const mesh = (geo, mat) => new THREE.Mesh(geo, mat);
+        const put = (m, x, y, z, parent) => { m.position.set(x, y, z); parent.add(m); return m; };
+        this.skyShapes = []; this.makaniVanes = [];
+        const puffs = [];                                       // every cloud puff of the village (one instanced draw call)
+        const puff = (x, y, z, sx, sy, sz) => puffs.push([x, y, z, sx, sy, sz]);
+        const flat = (geo, mat, x, z, y) => { const m = mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m; };
+
+        // ---- cloud shapes (the places you can walk) ----
+        const disc = (x, z, r, mat, y = 0.03) => {
+            flat(new THREE.CircleGeometry(r, 48), mat, x, z, y);
+            this.skyShapes.push({ t: 0, x, z, r });
+            const n = Math.ceil(r * 0.9);                            // a fluffy low rim all round
+            for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + rnd() * 0.2, s = 2.6 + rnd() * 2.4; puff(x + Math.cos(a) * (r - 1), rnd() * 1.6, z + Math.sin(a) * (r - 1), s, s * 0.55, s); }
+            for (let k = 0; k < 6; k++) { const a = rnd() * 6.28, rr = rnd() * r * 0.55, s = r * (0.35 + rnd() * 0.3); puff(x + Math.cos(a) * rr, -7 - rnd() * 7, z + Math.sin(a) * rr, s, s * 0.7, s); }   // the cloud's fat belly
+            for (let k = 0; k < 6; k++) { const s = r * (0.5 - k * 0.07); puff(x + (rnd() - 0.5) * 3, -18 - k * 9, z + (rnd() - 0.5) * 3, s, s * 0.8, s); }                 // a tall column of cloud holding it up
+        };
+        const road = (ax, az, bx, bz, hw, y = 0.02) => {
+            const len = Math.hypot(bx - ax, bz - az);
+            const rg = new THREE.PlaneGeometry(hw * 2, len); rg.rotateX(-Math.PI / 2);       // lies flat, its length running along z
+            const rm = mesh(rg, roadMat); rm.position.set((ax + bx) / 2, y, (az + bz) / 2); rm.rotation.y = Math.atan2(bx - ax, bz - az); rm.receiveShadow = true; g.add(rm);   // ...then spin it to point from a to b
+            this.skyShapes.push({ t: 1, ax, az, bx, bz, hw });
+            const n = Math.ceil(len / 8);
+            for (let i = 0; i <= n; i++) {                                   // fluffy edges and a soft belly under the road
+                const u = i / n, x = ax + (bx - ax) * u, z = az + (bz - az) * u, nx = (bz - az) / len, nz = -(bx - ax) / len;
+                [-1, 1].forEach(sd => { const s = 1.8 + rnd() * 1.6; puff(x + nx * sd * (hw - 0.8), rnd() * 1.2, z + nz * sd * (hw - 0.8), s, s * 0.55, s); });
+                if (i % 2 === 0) { const s = hw * (1.2 + rnd() * 0.6); puff(x, -4 - rnd() * 5, z, s, s * 0.6, s); }
+            }
+        };
+
+        // ---- the central plaza + the Great Windmill ----
+        disc(V.x, V.z, 28, plazaMat, 0.05);
+        const plaza = new THREE.Group();
+        put(mesh(new THREE.TorusGeometry(24, 0.5, 6, 56), band), 0, 0.2, 0, plaza).rotation.x = Math.PI / 2;
+        put(mesh(new THREE.TorusGeometry(10, 0.4, 6, 40), band), 0, 0.2, 0, plaza).rotation.x = Math.PI / 2;
+        const windmill = (h, bl, roof, spd) => {
+            const w = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(h * 0.16, h * 0.26, h, 14), stone), 0, h / 2, 0, w);
+            put(mesh(new THREE.CylinderGeometry(h * 0.285, h * 0.285, 0.7, 14), band), 0, h * 0.5, 0, w);
+            put(mesh(new THREE.ConeGeometry(h * 0.26, h * 0.3, 14), M(roof, { roughness: 0.6 })), 0, h + h * 0.13, 0, w);
+            put(mesh(new THREE.SphereGeometry(h * 0.07, 10, 8), M(0xf2b236)), 0, h * 0.9, h * 0.17, w);
+            const blades = new THREE.Group(); blades.position.set(0, h * 0.9, h * 0.2); w.add(blades);
+            for (let k = 0; k < 4; k++) {
+                const arm = new THREE.Group(); arm.rotation.z = k * Math.PI / 2; blades.add(arm);
+                put(mesh(new THREE.BoxGeometry(h * 0.04, bl, h * 0.02), M(0x7a5a3a)), 0, bl / 2, 0, arm);
+                put(mesh(new THREE.BoxGeometry(bl * 0.2, bl * 0.8, h * 0.012), M(k % 2 ? 0xffffff : roof)), bl * 0.12, bl * 0.55, 0, arm);
+            }
+            this.makaniVanes.push({ g: blades, sp: spd, ph: rnd() * 6 });
+            return { w, blades };
+        };
+        const great = windmill(26, 15, 0xf0627f, 0.5); great.w.position.set(0, 0, 0); plaza.add(great.w);
+        // colourful flags strung between posts round the plaza
+        for (let i = 0; i < 12; i++) {
+            const a = i / 12 * Math.PI * 2, px = Math.cos(a) * 20, pz = Math.sin(a) * 20;
+            put(mesh(new THREE.CylinderGeometry(0.15, 0.2, 7, 6), M(0x7a5a3a)), px, 3.5, pz, plaza);
+            const na = a + Math.PI / 12; const fx = Math.cos(na) * 20.3, fz = Math.sin(na) * 20.3;
+            const f = put(mesh(new THREE.PlaneGeometry(3.4, 1.8), M(roofC[i % 8], { side: THREE.DoubleSide })), fx, 6, fz, plaza); f.rotation.y = -na + Math.PI / 2;
+        }
+        plaza.position.set(V.x, 0, V.z);
+        this.mergeGroup(plaza, { flat: true, castShadow: false, exclude: [great.blades] });
+        g.add(plaza);
+        this.colliders.push(new THREE.Box3(new THREE.Vector3(V.x - 6, 0, V.z - 6), new THREE.Vector3(V.x + 6, 30, V.z + 6)));   // the windmill tower is solid (the spinning blades are high above your head)
+
+        // ---- a house of Makani: a round pod with a big cone roof, round windows and its own little windmill ----
+        const house = (idx) => {
+            const h = new THREE.Group(), body = M(pastel[idx % 8]), roof = M(roofC[idx % 8], { roughness: 0.6 });
+            put(mesh(new THREE.CylinderGeometry(4.4, 4.7, 5.4, 14), body), 0, 2.7, 0, h);
+            put(mesh(new THREE.CylinderGeometry(4.8, 4.8, 0.7, 14), band), 0, 5.5, 0, h);
+            put(mesh(new THREE.ConeGeometry(6.2, 4.6, 14), roof), 0, 8.1, 0, h);
+            for (let k = 0; k < 3; k++) { const a = Math.PI * 0.55 + k * 1.6 + 0.4; const wnd = put(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.4, 12), M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.8 })), Math.sin(a) * 4.45, 3.2, Math.cos(a) * 4.45, h); wnd.rotation.order = 'YXZ'; wnd.rotation.set(0, a - Math.PI / 2, Math.PI / 2); }
+            put(mesh(new THREE.BoxGeometry(1.8, 3, 0.5), M(0x6a4a34)), 0, 1.5, 4.5, h);                  // door (faces +z)
+            put(mesh(new THREE.SphereGeometry(0.2, 8, 6), M(0xf2b236)), 0.5, 1.5, 4.8, h);               // door knob
+            const wm = windmill(5.2, 3, roofC[(idx + 3) % 8], 1.4 + (idx % 3) * 0.5);                      // a tiny windmill on the roof
+            wm.w.position.set(0, 10.2, 0); wm.w.scale.setScalar(0.75); h.add(wm.w);
+            return { h, vane: wm.blades };
+        };
+        const pinwheel = (x, z, idx, parent) => {
+            put(mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 5), M(0x7a5a3a)), x, 1.5, z, parent);
+            const bl = new THREE.Group(); bl.position.set(x, 3.1, z + 0.12); parent.add(bl);
+            for (let k = 0; k < 4; k++) { const arm = new THREE.Group(); arm.rotation.z = k * Math.PI / 2; bl.add(arm); put(mesh(new THREE.BoxGeometry(0.9, 1.2, 0.05), M(roofC[(idx + k) % 8], { side: THREE.DoubleSide })), 0.45, 0.6, 0, arm); }
+            this.makaniVanes.push({ g: bl, sp: 3 + rnd() * 2, ph: rnd() * 6 });
+            return bl;
+        };
+
+        // ---- eight house-clouds in a ring, joined to the plaza by roads and to each other by a ring road ----
+        const plots = [];
+        for (let i = 0; i < 8; i++) {
+            const a = i / 8 * Math.PI * 2 + 0.2, rr = 74 + (i % 2) * 8, px = V.x + Math.sin(a) * rr, pz = V.z + Math.cos(a) * rr;
+            plots.push({ x: px, z: pz, a });
+            disc(px, pz, 13, plotMat, 0.04);
+            road(V.x + Math.sin(a) * 24, V.z + Math.cos(a) * 24, px, pz, 5);
+            const { h, vane } = house(i);
+            h.rotation.y = Math.atan2(V.x - px, V.z - pz) + (rnd() - 0.5) * 0.3;
+            h.position.set(px, 0, pz);
+            const flatParts = []; h.traverse(o => { if (o.isMesh) flatParts.push(o); });
+            this.mergeGroup(h, { flat: true, castShadow: false, exclude: [vane] });
+            g.add(h); this.addCollider(h, { shrink: 1.5 });
+            // pinwheels and a puffy bush on the plot
+            const dec = new THREE.Group(); dec.position.set(px, 0, pz); g.add(dec);
+            [[-8.6, 3, 0], [8.4, 1.5, 1], [7.4, -5.5, 2]].forEach(([dx, dz, k]) => pinwheel(dx, dz, i + k, dec));
+            puff(px + 9, 1.4, pz - 7, 2.6, 1.7, 2.6); puff(px - 9, 1.2, pz - 6, 2.2, 1.5, 2.2);
+        }
+        for (let i = 0; i < 8; i++) { const A = plots[i], B = plots[(i + 1) % 8]; road(A.x, A.z, B.x, B.z, 3.6, 0.015); }
+        // ---- the villagers: one standing outside each house, looking toward the plaza ----
+        plots.forEach((pl, i) => { const dx = V.x - pl.x, dz = V.z - pl.z, L = Math.hypot(dx, dz); this.spawnVillager(VILLAGERS[i], pl.x + dx / L * 9.5 + dz / L * 2.4, pl.z + dz / L * 9.5 - dx / L * 2.4, Math.atan2(dx, dz)); });
+
+        // ---- the long cloud road from the cloud city, with lanterns and kites along it ----
+        const rx0 = C.x, rz0 = C.z - 112, rx1 = V.x, rz1 = V.z + 26;
+        road(rx0, rz0, rx1, rz1, 7);
+        const lamps = new THREE.Group(), kite = [0xf0627f, 0x3f8fe8, 0xf2b236, 0x4cc29a, 0x8c6cf0, 0xff8a4a];
+        const len = Math.hypot(rx1 - rx0, rz1 - rz0), nx = (rz1 - rz0) / len, nz = -(rx1 - rx0) / len;
+        for (let d = 24, i = 0; d < len - 20; d += 30, i++) {
+            [-1, 1].forEach((sd, j) => {
+                const x = rx0 + (rx1 - rx0) * d / len + nx * sd * 6, z = rz0 + (rz1 - rz0) * d / len + nz * sd * 6;
+                put(mesh(new THREE.CylinderGeometry(0.2, 0.28, 5.4, 6), M(0x7a5a3a)), x, 2.7, z, lamps);
+                put(mesh(new THREE.SphereGeometry(0.9, 10, 8), M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.9 })), x, 5.9, z, lamps);
+                if ((i + j) % 2 === 0) { const k = put(mesh(new THREE.PlaneGeometry(2.2, 2.2), M(kite[(i + j) % 6], { side: THREE.DoubleSide })), x + nx * sd * 1.6, 9.2 + (i % 3), z + nz * sd * 1.6, lamps); k.rotation.set(0.2, Math.atan2(nx, nz), Math.PI / 4); }
+            });
+        }
+        this.mergeGroup(lamps, { flat: true, castShadow: false }); g.add(lamps);
+
+        // ---- all the cloud puffs, in one draw call ----
+        const inst = new THREE.InstancedMesh(sphere, cloudMat, puffs.length), m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion();
+        puffs.forEach((p, i) => { m4.compose(new THREE.Vector3(p[0], p[1], p[2]), q0, new THREE.Vector3(p[3], p[4], p[5])); inst.setMatrixAt(i, m4); });
+        inst.frustumCulled = false; g.add(inst);
+
+        // ---- signs ----
+        this.buildSignpost(C.x + 12, C.z - 128, ['Makani Village', 'Follow the cloud road north']);
+        this.buildSignpost(V.x + 11, V.z + 46, ['MAKANI VILLAGE', 'Where the wind lives']);
+    }
+
+    // The friendly giant cloud that carries you up: a puffy white body with a smiling face and a wispy tail.
+    // It faces -z at rest; the passengers sit on its flat, fluffy top (surface at y ~ 1.9).
+    buildSkyCloud() {
+        const M = (c, e = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 1, emissive: 0x6f86aa, emissiveIntensity: 0.32 }, e));
+        const white = M(0xffffff), tint = M(0xe4efff), shade = M(0xcddcf4), wisp = M(0xf4f8ff, { transparent: true, opacity: 0.78 });
+        const pink = new THREE.MeshStandardMaterial({ color: 0xffa8c0, roughness: 0.9, emissive: 0xff8aa8, emissiveIntensity: 0.25 });
+        const dark = new THREE.MeshStandardMaterial({ color: 0x1c2a44, roughness: 0.4 }), glint = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const sph = new THREE.SphereGeometry(1, 18, 14), root = new THREE.Group(), body = new THREE.Group(); root.add(body);
+        const puffs = [], tail = [], eyes = [];
+        const add = (mat, sx, sy, sz, x, y, z, live = true, parent = body) => {
+            const m = new THREE.Mesh(sph, mat); m.scale.set(sx, sy, sz); m.position.set(x, y, z); parent.add(m);
+            if (live) puffs.push({ m, sx, sy, sz, ph: Math.random() * 6.28, sp: 1.1 + Math.random() * 0.9 });
+            return m;
+        };
+        add(white, 4.2, 1.9, 7.0, 0, 0, 0, false);                                   // the main body
+        for (let i = 0; i < 18; i++) {                                                 // a fluffy rim round the edge (kept low, away from the seat)
+            const a = i / 18 * Math.PI * 2, x = Math.sin(a) * 4.0, z = Math.cos(a) * 6.4;
+            if (z < -4.2 && Math.abs(x) < 2.9) continue;                               // (leave the face uncovered)
+            if (z > 2.2 && Math.abs(x) < 2.6) continue;                                // (and keep the back clear so the riders can be seen)
+            const sz = 1.5 + ((i * 7) % 4) * 0.25;
+            add(i % 3 ? white : tint, sz, sz * 0.8, sz, x, 0.1 + ((i * 5) % 3) * 0.25, z);
+        }
+        for (let i = 0; i < 8; i++) add(shade, 2.3, 1.2, 2.3, ((i % 3) - 1) * 2.3, -1.4, (i - 3.5) * 1.9);   // lumpy belly
+        [[-3.6, 0.5, -3.2, 1.4], [3.6, 0.5, -3.2, 1.4], [-3.8, 0.35, 4.8, 1.5], [3.8, 0.35, 4.8, 1.5]].forEach(([x, y, z, s2]) => add(tint, s2, s2 * 0.85, s2, x, y, z));
+        // the face
+        [-1, 1].forEach(sd => {
+            const e = add(dark, 0.42, 0.62, 0.3, sd * 1.2, 0.55, -6.55, false); e.userData.sy = 0.62; eyes.push(e);
+            add(glint, 0.13, 0.17, 0.1, sd * 1.12, 0.82, -6.82, false);
+            add(pink, 0.75, 0.42, 0.25, sd * 2.4, -0.3, -6.1, false);
+        });
+        const smile = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.12, 8, 18, Math.PI), dark); smile.rotation.z = Math.PI; smile.position.set(0, -0.05, -6.75); body.add(smile);
+        // a wispy tail trailing behind
+        for (let i = 0; i < 6; i++) { const m = add(wisp, 1.7 - i * 0.22, 0.9 - i * 0.1, 1.7 - i * 0.22, 0, -0.5 - i * 0.1, 8.4 + i * 2.4, false); tail.push({ m, y0: m.position.y }); }
+        root.scale.setScalar(1.5);
+        root.userData.puffs = puffs; root.userData.tail = tail; root.userData.eyes = eyes;
+        root.traverse(o => { if (o.isMesh) o.castShadow = false; });
+        this.scene.add(root);
+        return root;
+    }
+
+    // Puffs breathe, the tail swishes, and now and then it blinks. energy: 0 = calm .. 1.5 = flying.
+    animateSkyCloud(c, t, energy = 1) {
+        const U = c.userData; if (!U.puffs) return;
+        U.puffs.forEach(p => { const k = 1 + Math.sin(t * p.sp + p.ph) * 0.05 * (0.5 + energy * 0.5); p.m.scale.set(p.sx * k, p.sy * (2 - k), p.sz * k); });
+        U.tail.forEach((p, i) => { p.m.position.x = Math.sin(t * 2.2 - i * 0.7) * (0.4 + i * 0.3) * (0.4 + energy * 0.6); p.m.position.y = p.y0 + Math.sin(t * 1.6 - i) * 0.22; });
+        const blink = (t % 4.2) > 4.06 ? 0.12 : 1;
+        U.eyes.forEach(e => { e.scale.y = e.userData.sy * blink; });
+    }
+
+    // Park the cloud on the landing pad.
+    perchSkyCloud() {
+        const b = this.skyCloud || (this.skyCloud = this.buildSkyCloud());
+        b.visible = true; b.rotation.set(0, 0, 0);
+        b.position.set(SKY.x - 11, 3.4, SKY.z + 95);
+        this.animateSkyCloud(b, 0, 0.4);
+    }
+
+    // Cutscene step 1 (the Gravity Core is already left): the cloud scoops the party up and hovers high above the earth.
+    beginSkyRide() {
+        this.skyReached = true;
+        const b = this.skyCloud || (this.skyCloud = this.buildSkyCloud());
+        b.visible = true;
+        this.skyRide = { phase: 'hover', t: 0, clock: 0, T: 17, done: false, prev: null };
+        this.applyLook(0, 0, 0, 1);
+        Sound.setMood('sky');
+        if (this.controls && this.controls.isLocked) this.controls.unlock();
+        this.camera.rotation.order = 'YXZ';
+        this.updateSkyRide(0);
+        this.camera.position.copy(this.skyCamTarget || this.camera.position);
+    }
+
+    startSkyFlight() { if (this.skyRide) { this.skyRide.phase = 'flight'; this.skyRide.t = 0; Sound.play('boat'); } }
+
+    updateSkyRide(delta) {
+        const R = this.skyRide, b = this.skyCloud;
+        if (!R || !b) return;
+        const C = SKY, ease = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+        R.clock += delta;
+        const start = new THREE.Vector3(C.x - 90, 130, C.z + 640), end = new THREE.Vector3(C.x - 11, 3.4, C.z + 95);
+        let pos, yaw = 0, pitch = 0, bank = 0;
+        if (R.phase === 'hover') {
+            pos = start.clone(); pos.y += Math.sin(R.clock * 1.2) * 1.2;
+            yaw = Math.sin(R.clock * 0.3) * 0.15; bank = Math.sin(R.clock * 0.7) * 0.05;
+        } else {
+            R.t += delta;
+            const u = Math.min(1, R.t / R.T), e = ease(u);
+            pos = new THREE.Vector3().lerpVectors(start, end, e);
+            pos.y = end.y + (start.y - end.y) * (1 - ease(Math.min(1, u * 1.04))) + Math.sin(R.t * 1.4) * 1.5 * (1 - u);
+            pos.x += Math.sin(R.t * 0.8) * 12 * (1 - u) * (1 - u);
+            if (R.prev) {
+                const d = pos.clone().sub(R.prev);
+                if (d.lengthSq() > 1e-8) { yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) * 1.6; }
+            }
+            R.yawS = R.yawS === undefined ? yaw : R.yawS + (yaw - R.yawS) * Math.min(1, delta * 3); yaw = R.yawS;
+            R.pitchS = R.pitchS === undefined ? pitch : R.pitchS + (pitch - R.pitchS) * Math.min(1, delta * 3); pitch = R.pitchS;
+            bank = Math.cos(R.t * 0.8) * 0.18 * (1 - u);
+            if (u >= 1 && !R.done) { R.done = true; window.gameSystem.onSkyRideEnd(); }
+        }
+        R.prev = pos.clone();
+        b.position.copy(pos); b.rotation.order = 'YXZ'; b.rotation.set(pitch, yaw, bank);
+        this.animateSkyCloud(b, R.clock, R.phase === 'hover' ? 0.6 : 1.5 * (1 - ease((R.t / R.T - 0.9) * 10)));
+        b.updateMatrixWorld(true);
+        // the passengers ride on its back
+        if (this.playerObj) { this.playerObj.position.copy(b.localToWorld(new THREE.Vector3(0, 1.95, -0.5))); this.playerObj.rotation.set(0, yaw + Math.PI, 0); }
+        if (this.companionObj) { this.companionObj.position.copy(b.localToWorld(new THREE.Vector3(0, 1.95, 2.6))); this.companionObj.rotation.set(0, yaw + Math.PI, 0); }
+        // camera: a slowly swinging view from behind and above (or off to the side while it hovers)
+        const off = R.phase === 'hover' ? new THREE.Vector3(16, 5, -24) : new THREE.Vector3(8 + Math.sin(R.clock * 0.5) * 6, 15, 21);
+        const ox = off.x * Math.cos(yaw) + off.z * Math.sin(yaw), oz = -off.x * Math.sin(yaw) + off.z * Math.cos(yaw);
+        const target = new THREE.Vector3(pos.x + ox, pos.y + off.y, pos.z + oz);
+        this.skyCamTarget = target;
+        if (R.phase === 'hover' && R.clock === delta) this.camera.position.copy(target); else this.camera.position.lerp(target, 1 - Math.exp(-delta * 4));
+        this.camera.lookAt(pos.x - Math.sin(yaw) * 5, pos.y + 1.5, pos.z - Math.cos(yaw) * 5);
+    }
+
+    // Cutscene last step: the cloud has landed. Step onto the landing pad of the cloud city.
+    finishSkyRide() {
+        this.skyRide = null;
+        this.skyReached = true; this.desertReached = true;
+        this.perchSkyCloud();
+        const p = this.playerObj, C = SKY;
+        p.position.set(C.x + 3.5, 0.7, C.z + 92); p.rotation.set(0, Math.PI, 0);
+        if (this.companionObj) { this.companionObj.position.set(C.x + 7, 0.7, C.z + 94); this.companionObj.rotation.set(0, Math.PI, 0); this.compBaseY = undefined; }
+        this.velocityY = 0; this.isJumping = false; this.isGliding = false; this.grounded = true;
+        this.camera.rotation.order = 'YXZ'; this.camera.rotation.set(-0.2, 0, 0);
+        this.cameraYaw = 0; this.cameraPitch = -0.2;
+        this.camera.position.set(C.x + 2, 10, C.z + 108);
+        this.applyLook(0, 0, 0, 1);
+        Sound.setMood('sky');
+        this.updateCulling();
+    }
+
+    // =====================================================================================
     //  THE BOAT VOYAGE  (cutscene: board a boat, sail, and get slammed by a hand-shaped wave)
     // =====================================================================================
 
@@ -6648,6 +7507,7 @@ class Overworld3D {
     bindEvents() {
         document.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'e' && !e.repeat) this.tryTalk();   // talk to the villager next to you
         });
         document.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         window.addEventListener('resize', () => {
@@ -6807,9 +7667,16 @@ class Overworld3D {
 
         // Keep the player inside the world (the ground ends at x = ±165; the ocean ends past the arena).
         { const p = this.playerObj.position;
+          if (this.skyReached) {   // the Sky Kingdom is made of clouds: you can only walk on them (not out into the open sky)
+              if (!this.skyWalkable(p.x, p.z)) {
+                  if (this.skyWalkable(oldPos.x, p.z)) p.x = oldPos.x;            // slide along the edge
+                  else if (this.skyWalkable(p.x, oldPos.z)) p.z = oldPos.z;
+                  else { p.x = oldPos.x; p.z = oldPos.z; }
+              }
+          } else {
           p.x = THREE.MathUtils.clamp(p.x, -160, 160);
           // (once you're in the reef the way back north is closed off: the wave carried you here)
-          p.z = THREE.MathUtils.clamp(p.z, this.desertReached ? DESERT_END_Z - 12 : WORLD.arenaZ - 90, this.desertReached ? DESERT_START_Z + 25 : this.reefReached ? REEF_START_Z + 25 : 105); }
+          p.z = THREE.MathUtils.clamp(p.z, this.desertReached ? DESERT_END_Z - 12 : WORLD.arenaZ - 90, this.desertReached ? DESERT_START_Z + 25 : this.reefReached ? REEF_START_Z + 25 : 105); } }
 
         if (this.quicksand && this.desertReached) this.updateQuicksand(delta);
         this.animatePlayer(delta, oldPos, forward);
@@ -6852,36 +7719,37 @@ class Overworld3D {
         const t = THREE.MathUtils.clamp((pz - WORLD.oceanBlendStartZ) / (WORLD.oceanFogThresholdZ - WORLD.oceanBlendStartZ), 0, 1);
         const reefIn = THREE.MathUtils.clamp((REEF_START_Z + 30 - pz) / 60, 0, 1);
         const reefOut = THREE.MathUtils.clamp((pz - (REEF_END_Z - 38)) / 40, 0, 1); // the plaza at the far end is dark again
-        if (this.desertReached) this.applyLook(0, 0, 1);       // the desert is a bright, hazy, golden day
+        if (this.skyReached) this.applyLook(0, 0, 0, 1);       // the Sky Kingdom is a bright, airy blue day
+        else if (this.desertReached) this.applyLook(0, 0, 1);       // the desert is a bright, hazy, golden day
         else this.applyLook(t, Math.min(reefIn, reefOut));
 
         this.checkCollisions();
     }
 
     // Set the fog, sky and lights. t = how "underwater" (0 sunny coast .. 1 deep sea), r = how much of the sunlit reef look.
-    applyLook(t, r = 0, d = 0) {
+    applyLook(t, r = 0, d = 0, s = 0) {
         this.oceanFactor = t;
         if (this.scene.fog && this.coastFogColor) {
-            this.scene.fog.color.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
-            this.scene.fog.near = 100 - t * 88 + r * 42 + d * 30;   // clear nearby, hazy far away; underwater: thick murky water
-            this.scene.fog.far = 320 - t * 205 + r * 135 + d * 110;
-            this.scene.background.copy(this.coastBgColor).lerp(this.oceanBgColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
+            this.scene.fog.color.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
+            this.scene.fog.near = 100 - t * 88 + r * 42 + d * 30 + s * 40;   // clear nearby, hazy far away; underwater: thick murky water
+            this.scene.fog.far = 320 - t * 205 + r * 135 + d * 110 + s * 110;
+            this.scene.background.copy(this.coastBgColor).lerp(this.oceanBgColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
         }
         // Sky + lighting follow the same blend: bright sunny coast -> dim, blue-green deep ocean (or the bright reef).
         if (this.skyUniforms) {
-            this.skyUniforms.topColor.value.copy(this.coastSkyTop).lerp(this.oceanSkyTop, t).lerp(this.reefSkyTop, r).lerp(this.desertSkyTop, d);
-            this.skyUniforms.horizonColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
-            this.skyUniforms.groundColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
+            this.skyUniforms.topColor.value.copy(this.coastSkyTop).lerp(this.oceanSkyTop, t).lerp(this.reefSkyTop, r).lerp(this.desertSkyTop, d).lerp(this.skySkyTop, s);
+            this.skyUniforms.horizonColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
+            this.skyUniforms.groundColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
             this.skyUniforms.sunGlow.value = 1 - t;
         }
         if (this.hemiLight) {
-            this.hemiLight.intensity = 0.62 - t * 0.28 + r * 0.3 + d * 0.12;
-            this.hemiLight.color.copy(this.hemiSkyCoast).lerp(this.hemiSkyOcean, t).lerp(this.hemiSkyReef, r).lerp(this.hemiSkyDesert, d);
-            this.hemiLight.groundColor.copy(this.hemiGroundCoast).lerp(this.hemiGroundOcean, t).lerp(this.hemiGroundReef, r).lerp(this.hemiGroundDesert, d);
+            this.hemiLight.intensity = 0.62 - t * 0.28 + r * 0.3 + d * 0.12 + s * 0.22;
+            this.hemiLight.color.copy(this.hemiSkyCoast).lerp(this.hemiSkyOcean, t).lerp(this.hemiSkyReef, r).lerp(this.hemiSkyDesert, d).lerp(this.hemiSkyAir, s);
+            this.hemiLight.groundColor.copy(this.hemiGroundCoast).lerp(this.hemiGroundOcean, t).lerp(this.hemiGroundReef, r).lerp(this.hemiGroundDesert, d).lerp(this.hemiGroundAir, s);
         }
         if (this.sunLight) {
-            this.sunLight.intensity = 1.3 - t * 0.85 + r * 0.55 + d * 0.25;
-            this.sunLight.color.copy(this.sunCoast).lerp(this.sunOcean, t).lerp(this.sunReef, r).lerp(this.sunDesert, d);
+            this.sunLight.intensity = 1.3 - t * 0.85 + r * 0.55 + d * 0.25 + s * 0.05;
+            this.sunLight.color.copy(this.sunCoast).lerp(this.sunOcean, t).lerp(this.sunReef, r).lerp(this.sunDesert, d).lerp(this.sunAir, s);
         }
     }
 
@@ -7050,6 +7918,7 @@ class Overworld3D {
             } else { // villagers: turn to watch you when you're near, and wave hello
                 if (dist < 20) { Animations.faceToward(m, px, pz, delta, 3.5); ctx.lookYaw = Animations.lookYawTo(m, px, pz); }
                 ctx.calm = e.storyId === 'barnico';
+                ctx.talk = e.type === 'villager' && this.talkingTo === e && window.gameSystem.state === 'dialogue';
                 ctx.greet = dist < 13 && (e.storyId === 'barnico' || e.storyId === 'octa_join');
             }
             Animations.update(m, delta, ctx);
@@ -7145,6 +8014,14 @@ class Overworld3D {
             return;
         }
 
+        if (this.kite) {   // Iolana's kite ring race: you're flying, so the walking code sits this one out
+            KiteRace.update(delta);
+            this.updateAmbientLife(delta);
+            this.updateAtmosphere(delta, this.oceanFactor || 0);
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
         if (window.gameSystem.isCutscene) {
             if (this.cutsceneProgress !== undefined) {
                 this.cutsceneProgress += 0.005;
@@ -7163,10 +8040,11 @@ class Overworld3D {
                 }
             }
             if (this.voyage) this.updateVoyage(delta);
+            if (this.skyRide) this.updateSkyRide(delta);
             this.updateAmbientLife(delta);
             this.updateAtmosphere(delta, this.oceanFactor || 0);
             this.renderer.render(this.scene, this.camera);
-        } else if (window.gameSystem.state === 'dialogue' || window.gameSystem.state === 'shop' || window.gameSystem.state === 'gameover') {
+        } else if (window.gameSystem.state === 'dialogue' || window.gameSystem.state === 'shop' || window.gameSystem.state === 'gameover' || window.gameSystem.state === 'choice') {
             // While someone is talking (or you've fallen) the world doesn't freeze: everyone keeps breathing,
             // and hit / death animations finish playing.
             this.updateAmbientLife(delta);
@@ -7409,7 +8287,7 @@ const SaveGame = (() => {
         if (!gs || !ow || !ow.playerObj || !gs.party.length) return false;
         if (gs.isCutscene || gs.state === 'gauntlet' || gs.state === 'gameover' || gs.state === 'menu') return false;
         // Not while the boat voyage runs or during Oblongtalo's challenge; the long Coral Reef is fine to save in.
-        if (ow.voyage || ow.oblongtaloMesh || (window.GravityCore && GravityCore.active)) return false;
+        if (ow.voyage || ow.skyRide || ow.kite || gs.state === 'choice' || ow.oblongtaloMesh || (window.GravityCore && GravityCore.active)) return false;
         if (ow.arenaTriggered && !ow.desertReached) return false;
         if (ow.handWaveTriggered && !ow.reefReached) return false;
         if (gs.party[0].hp <= 0) return false;
@@ -7444,6 +8322,9 @@ const SaveGame = (() => {
             gone,
             reef: !!ow.reefReached,
             desert: !!ow.desertReached,
+            sky: !!ow.skyReached,
+            met: [...(ow.metVillagers || [])],
+            kite: { best: ow.kiteBest == null ? null : +ow.kiteBest.toFixed(2), medal: ow.kiteMedal || 0 },
             coinsTaken: ow.collectedCoins || [],
             flow: { unlocked: Sound.flowUnlocked, on: Sound.flowOn }
         };
@@ -7498,6 +8379,9 @@ const SaveGame = (() => {
         ow.tryOpenGates(true); // gates for cleared rooms stay open
         if (d.reef) { ow.reefReached = true; ow.handWaveTriggered = true; } // already past the boat: back in the Coral Reef
         if (d.desert) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; } // Chapter 3: the Dunes of Force
+        if (d.met) ow.metVillagers = new Set(d.met);
+        if (d.kite) { ow.kiteBest = d.kite.best == null ? null : d.kite.best; ow.kiteMedal = d.kite.medal || 0; }
+        if (d.sky) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; ow.skyReached = true; ow.perchSkyCloud(); } // Chapter 4: the Sky Kingdom
 
         const w = d.world;
         ow.playerObj.position.set(w.x, w.y, w.z);
@@ -7588,6 +8472,22 @@ const Quest = (() => {
         const at = (e, text) => ({ text, x: e.mesh.position.x, z: e.mesh.position.z });
 
         if (gs.state === 'gauntlet' || ow.oblongtaloMesh) return { text: "Survive Oblongtalo's charges!" };
+        if (ow.skyReached) {
+            if (Math.hypot(pos.x - MAKANI.x, pos.z - MAKANI.z) < 120) {
+                const met = ow.metVillagers ? ow.metVillagers.size : 0;
+                if (met < VILLAGERS.length) {   // lead the way to the nearest villager you haven't met yet
+                    let best = null, bd = 1e12;
+                    ow.entities.forEach(e => { if (e.type === 'villager' && !ow.metVillagers.has(e.v.id)) { const d = Math.hypot(e.mesh.position.x - pos.x, e.mesh.position.z - pos.z); if (d < bd) { bd = d; best = e; } } });
+                    if (best) return { text: 'Say hello to the villagers of Makani (' + met + '/' + VILLAGERS.length + ')', x: best.mesh.position.x, z: best.mesh.position.z };
+                }
+                if (ow.kiteBest == null) {   // all met: point at Iolana and her kite race
+                    const io = ow.entities.find(e => e.type === 'villager' && e.v.id === 'iolana');
+                    if (io) return { text: 'Talk to Iolana again to try her kite race', x: io.mesh.position.x, z: io.mesh.position.z };
+                }
+                return { text: 'Explore Makani Village', x: MAKANI.x, z: MAKANI.z };
+            }
+            return { text: 'Follow the cloud road north to Makani Village', x: MAKANI.x, z: MAKANI.z + 30 };
+        }
         if (ow.desertReached) {
             if (ow._fallingToCore) return { text: '...' };
             if (Math.hypot(pos.x - VILLAGE.x, pos.z - VILLAGE.z) < 130) return { text: 'Find the quicksand that leads to the Gravity Core', x: QUICKSAND.x, z: QUICKSAND.z };
@@ -7792,7 +8692,7 @@ const GravityCore = (() => {
             q4.setFromEuler(new THREE.Euler(Math.random() * 3, Math.random() * 3, Math.random() * 3)); m4.compose(d.multiplyScalar(R + 22 + Math.random() * 40), q4, V3(s, s * 0.8, s)); rocks.setMatrixAt(i, m4);
         }
         const orbit = new THREE.Group(); orbit.add(rocks); group.add(orbit); stage.orbit = orbit;
-        scene.add(group);
+        scene.add(group); stage.group = group;
         // stars
         const sg = new THREE.BufferGeometry(), sp = [];
         for (let i = 0; i < 900; i++) { const d = V3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(850); sp.push(d.x, d.y, d.z); }
@@ -8181,8 +9081,22 @@ const GravityCore = (() => {
         update(0.001);
     }
 
+    // Leave the Gravity Core for good (after Graton falls): put the party back in the normal world and bring the sun back.
+    function leave() {
+        const ow = overworld3d, gs = gameSystem;
+        X.active = false;
+        if (P && P.pivot) { P.pivot.remove(ow.playerObj); ow.scene.add(ow.playerObj); ow.playerObj.rotation.set(0, 0, 0); ow.scene.remove(P.pivot); }
+        if (P && P.cpivot && ow.companionObj) { P.cpivot.remove(ow.companionObj); ow.scene.add(ow.companionObj); ow.companionObj.rotation.set(0, 0, 0); ow.scene.remove(P.cpivot); }
+        if (stage && stage.group) stage.group.visible = false;
+        if (stage && stage.stars) stage.stars.visible = false;
+        if (boss && boss.root) boss.root.visible = false;
+        if (ow.sunGroup) ow.sunGroup.visible = true; if (ow.clouds) ow.clouds.visible = true; if (ow.motes) ow.motes.visible = true;
+        if (ow.sunLight) ow.sunLight.castShadow = true;
+        gs.state = 'overworld';
+    }
+
     return {
-        get active() { return X.active; }, begin, update, strike, playerAttackStarted, lookBy,
+        get active() { return X.active; }, begin, leave, update, strike, playerAttackStarted, lookBy,
         get boss() { return B; }, get player() { return P; }, get meteors() { return meteors; }, BOSS_NAME, R, C
     };
 })();
@@ -8202,7 +9116,7 @@ window.GravityCore = GravityCore;
 const Mobile = (() => {
     const on = !!window.IS_MOBILE;
     const stick = { x: 0, y: 0, active: false };
-    let root = null, stickZone, lookZone, base, knob, atkBtn, jumpBtn, hint, built = false, wasPlaying = false;
+    let root = null, stickZone, lookZone, base, knob, atkBtn, jumpBtn, talkBtn, hint, built = false, wasPlaying = false;
     let stickId = null, lookId = null, ox = 0, oy = 0, lx = 0, ly = 0, atkTimer = null;
     const STICK_R = 58;
 
@@ -8250,9 +9164,10 @@ const Mobile = (() => {
         base = el('div', 'mc-stick-base'); knob = el('div', 'mc-stick-knob'); base.appendChild(knob);
         atkBtn = el('div', 'mc-btn', '⚔'); atkBtn.id = 'mc-attack';
         jumpBtn = el('div', 'mc-btn', '⤒'); jumpBtn.id = 'mc-jump';
+        talkBtn = el('div', 'mc-btn', '💬'); talkBtn.id = 'mc-talk';
         const jl = el('div', 'mc-btn-label', 'JUMP / GLIDE'); jumpBtn.appendChild(jl);
         hint = el('div', 'mc-hint', 'Left thumb: move   ·   Drag on the right: look   ·   ⚔ attack   ·   ⤒ jump (hold in air to glide)');
-        root.append(lookZone, stickZone, base, atkBtn, jumpBtn, hint);
+        root.append(lookZone, stickZone, base, atkBtn, jumpBtn, talkBtn, hint);
         overworld3d.stick = stick;
 
         // --- joystick: appears wherever the left thumb lands
@@ -8280,11 +9195,15 @@ const Mobile = (() => {
         jumpBtn.addEventListener('pointerdown', (e) => { jumpBtn.setPointerCapture(e.pointerId); jumpBtn.classList.add('down'); overworld3d.keys[' '] = true; });
         ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => jumpBtn.addEventListener(ev, () => { jumpBtn.classList.remove('down'); overworld3d.keys[' '] = false; }));
 
+        // talk: the 💬 button appears when a villager is next to you
+        talkBtn.addEventListener('pointerdown', () => overworld3d.tryTalk());
+
         // show the controls only while you're actually playing (not in dialogue, menus, shops or cutscenes)
         setInterval(() => {
             const gs = window.gameSystem;
-            const playing = !!(gs && overworld3d.playerObj && (gs.state === 'overworld' || gs.state === 'gauntlet' || gs.state === 'core') && !gs.isCutscene);
+            const playing = !!(gs && overworld3d.playerObj && (gs.state === 'overworld' || gs.state === 'gauntlet' || gs.state === 'core' || gs.state === 'kite') && !gs.isCutscene);
             root.classList.toggle('mc-off', !playing);
+            talkBtn.classList.toggle('show', playing && !!overworld3d.nearVillager);
             if (!playing && wasPlaying) releaseAll();
             wasPlaying = playing;
             if (playing && !showHint.done) showHint();
@@ -8602,6 +9521,8 @@ class GameSystem3D {
                     if (this.dialogueQueue && this.dialogueQueue.length > 0) {
                         const nextMsg = this.dialogueQueue.shift();
                         setTimeout(() => this.showDialogue(nextMsg.speaker, nextMsg.text), 100);
+                    } else if (this.afterTalk) {                 // a conversation that ends with a question (like Iolana's race)
+                        const next = this.afterTalk; this.afterTalk = null; next();
                     } else if (this.isCutscene) {
                         this.endCutscene();
                     }
@@ -8618,7 +9539,8 @@ class GameSystem3D {
             this.afterDialogue = null;
             next();
             if (this.dialogueQueue && this.dialogueQueue.length) return;   // (it queued more text)
-            if (this.isCutscene && overworld3d.voyage) return;             // (still sailing)
+            if (this.cutsceneHold) return;                                  // (the next scene starts after a fade)
+            if (this.isCutscene && (overworld3d.voyage || overworld3d.skyRide)) return;   // (still sailing / flying)
             if (this.afterDialogue) return;
         }
         this.isCutscene = false;
@@ -8680,8 +9602,88 @@ class GameSystem3D {
             { speaker: 'Graton', text: 'Forgive me. I have guarded it for so long that I forgot how to tell a friend from a threat. Go on. A path of light is opening above you.' },
             { speaker: 'System', text: 'The black hole folds quietly into itself. A column of light rises from the surface of the core, and it leads up, and up, toward the sky.' }
         ];
-        this.afterDialogue = () => { this.isCutscene = false; this.showChapterEnd(4, 'SKY KINGDOM', 'You calmed the Gravity Core! Chapter 4, the Sky Kingdom, is coming soon.'); };
+        this.afterDialogue = () => this.startSkyRide();
         this.showDialogue('System', 'Graton\u2019s rocks tumble apart, and the little black hole flickers and goes quiet.');
+    }
+
+    // Chapter 4: the column of light carries the party up, and a giant friendly cloud catches them in the sky.
+    startSkyRide() {
+        this.isCutscene = true;
+        this.cutsceneHold = true;   // keep the cutscene going while the screen fades to white (the ride begins after that)
+        document.body.classList.add('cutscene-active');
+        Sound.play('levelup');
+        overworld3d.setFade(1, 1.4, '#ffffff');
+        setTimeout(() => {
+            this.cutsceneHold = false;
+            GravityCore.leave();
+            overworld3d.beginSkyRide();
+            overworld3d.setFade(0, 2.2, '#ffffff');
+            this.dialogueQueue = [
+                { speaker: 'Wisp', text: 'Easy, little one! I have you. Hold on tight to my fluff!' },
+                { speaker: 'Wisp', text: 'I am Wisp. When the Gravity Core went calm, the whole sky felt it. The Sky Kingdom has been waiting for someone like you.' },
+                { speaker: 'Wisp', text: 'Hang on. We are going up, up, and over the clouds!' }
+            ];
+            this.afterDialogue = () => overworld3d.startSkyFlight();
+            this.showDialogue('System', 'The light lifts you higher and higher, past the stars, past the clouds... then a huge, puffy shape sweeps underneath you, and you land on something soft, cool and bouncy. A giant cloud has caught you in the sky, and it has a big smiling face!');
+        }, 1500);
+    }
+
+    // The cloud has drifted all the way to the cloud city and landed.
+    onSkyRideEnd() {
+        overworld3d.setFade(1, 1.0, '#ffffff');
+        setTimeout(() => {
+            overworld3d.finishSkyRide();
+            overworld3d.setFade(0, 2.0, '#ffffff');
+            this.dialogueQueue = [
+                { speaker: 'Wisp', text: 'This is as far as I can carry you. The city is yours to explore!' },
+                { speaker: 'Wisp', text: 'But be careful. Something up here has been stirring ever since the core went quiet.' }
+            ];
+            this.showDialogue('System', 'Wisp drifts down onto the landing pad and settles with a happy little puff. Before you, white towers with bright roofs rise out of the mist. This is the Sky Kingdom.');
+        }, 1200);
+    }
+
+    // Talking to a villager of Makani: the first time you get their whole introduction, after that a different chat line each time.
+    talkToVillager(ent) {
+        const v = ent.v, ow = overworld3d, first = !ow.metVillagers.has(v.id);
+        ow.metVillagers.add(v.id);
+        if (v.id === 'iolana' && !first) { this.offerKiteRace(ent); return; }   // after the first hello, she offers her kite race
+        const lines = first ? v.intro.slice() : [v.chat[(ent.chatIdx = ((ent.chatIdx === undefined ? -1 : ent.chatIdx) + 1)) % v.chat.length]];
+        const who = v.name + ', ' + v.title;
+        this.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
+        this.showDialogue(who, lines[0]);
+        if (first && window.SaveGame) setTimeout(() => SaveGame.autosave(), 500);
+    }
+
+    // Iolana invites you to her kite ring race (talk to her again after the first hello).
+    offerKiteRace(ent) {
+        const ow = overworld3d, who = ent.v.name + ', ' + ent.v.title, best = ow.kiteBest, medals = ['', 'Bronze', 'Silver', 'Gold'];
+        const steer = window.IS_MOBILE ? 'Use the left thumb stick: left and right to steer, up to climb, down to dive.' : 'Steer with A and D. W climbs and S dives.';
+        const lines = best == null
+            ? ['My kite race! Twelve glowing rings in one big loop around Makani. Fly through them all before the wind gets bored of you.', steer + ' Ready to fly?']
+            : ['Back for more? Your best is ' + best.toFixed(1) + ' seconds (' + (medals[ow.kiteMedal] || 'Bronze') + '). Gold needs ' + KiteRace.GOLD + ' seconds or less. Ready to fly?'];
+        this.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
+        this.afterTalk = () => this.showChoice('Race Iolana’s kite course?', 'Yes, let’s fly!', 'Maybe later', () => KiteRace.begin(ent), () => this.showToast('Iolana: "The wind will wait for you!"'));
+        this.showDialogue(who, lines[0]);
+    }
+
+    // A little yes / no question on the screen. onYes / onNo run after the player picks.
+    showChoice(text, yesLabel, noLabel, onYes, onNo) {
+        const box = document.getElementById('choice-box'), yes = document.getElementById('choice-yes'), no = document.getElementById('choice-no');
+        document.getElementById('choice-text').textContent = text;
+        yes.textContent = yesLabel; no.textContent = noLabel;
+        if (overworld3d.controls && overworld3d.controls.isLocked) overworld3d.controls.unlock();
+        this.state = 'choice';
+        box.classList.remove('hidden');
+        const done = (fn) => {
+            box.classList.add('hidden');
+            document.removeEventListener('keydown', onKey);
+            yes.onclick = no.onclick = null;
+            this.state = 'overworld';
+            if (fn) fn();
+        };
+        const onKey = (e) => { const k = e.key.toLowerCase(); if (k === 'enter' || k === 'y') done(onYes); else if (k === 'escape' || k === 'n') done(onNo); };
+        yes.onclick = () => done(onYes); no.onclick = () => done(onNo);
+        document.addEventListener('keydown', onKey);
     }
 
     // The "chapter over" screen (the text changes per chapter).
@@ -8920,6 +9922,7 @@ class SettingsSystem {
     }
 
     openPauseMenu() {
+        if (window.KiteRace && KiteRace.active) { KiteRace.end('quit'); return; }   // (the Pause button cancels the kite race)
         this.refreshPauseButtons();
         this.pauseUI.classList.remove('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.unlock();

@@ -47,6 +47,7 @@ const Animations = (() => {
         const P = r.parts;
         if (P.staff_loop && P.hem) r.kind = 'king';
         else if (P.arm_l && P.head) r.kind = 'human';
+        else if (P.head && P.scarf) r.kind = 'villager';          // (the villagers of Makani: a head and a fluttering scarf, no swinging arms)
         else if (P.tail_0 && P.pinch_l) r.kind = 'scortus';
         else if (P.pinch_l) r.kind = 'crab';
         else if (P.sseg_0 && P.sseg_1) r.kind = 'snake';
@@ -315,6 +316,23 @@ const Animations = (() => {
         return bob;
     }
 
+    // ---------------------------------------------------------------- villagers: breathe, watch you, nod while talking, scarf in the wind
+    function villager(g, r, dt, c) {
+        const t = r.t, off = r.s.off || (r.s.off = Math.random() * 6);
+        const base = g.userData.baseScale || (g.userData.baseScale = g.scale.x);
+        g.scale.set(base, base * (1 + Math.sin(t * 1.6 + off) * 0.012), base);
+        const head = r.parts.head;
+        if (head) {
+            head.rotation.y = S(r, 'hy', clamp(c.lookYaw || 0, -0.9, 0.9), 6);
+            head.rotation.x = S(r, 'hx', c.talk ? Math.sin(t * 7) * 0.1 : Math.sin(t * 0.8 + off) * 0.02, 10);
+            head.rotation.z = S(r, 'hz', c.talk ? Math.sin(t * 3.1) * 0.05 : 0, 8);
+        }
+        const sc = r.parts.scarf;
+        if (sc) { sc.rotation.x = sc.userData.rest.x + 0.08 + Math.sin(t * 2.2 + off) * 0.12; sc.rotation.z = Math.sin(t * 1.7 + off) * 0.07; }
+        if (r.hurtT >= 0) r.hurtT = -1;
+        return Math.sin(t * 1.3 + off) * 0.02;
+    }
+
     // ---------------------------------------------------------------- fire fish
     function firefish(g, r, dt, c) {
         const t = r.t, moving = (c.speed || 0) > 0.8;
@@ -363,6 +381,7 @@ const Animations = (() => {
             case 'king': bob = king(g, r, dt, c); break;
             case 'eel': bob = eel(g, r, dt, c); break;
             case 'firefish': bob = firefish(g, r, dt, c); break;
+            case 'villager': bob = villager(g, r, dt, c); break;
             case 'snake': bob = snake(g, r, dt, c); break;
             case 'scortus': bob = scortus(g, r, dt, c); break;
             default: bob = generic(g, r, dt, c);

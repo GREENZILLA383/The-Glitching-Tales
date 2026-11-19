@@ -106,7 +106,7 @@ const GravityCore = (() => {
             q4.setFromEuler(new THREE.Euler(Math.random() * 3, Math.random() * 3, Math.random() * 3)); m4.compose(d.multiplyScalar(R + 22 + Math.random() * 40), q4, V3(s, s * 0.8, s)); rocks.setMatrixAt(i, m4);
         }
         const orbit = new THREE.Group(); orbit.add(rocks); group.add(orbit); stage.orbit = orbit;
-        scene.add(group);
+        scene.add(group); stage.group = group;
         // stars
         const sg = new THREE.BufferGeometry(), sp = [];
         for (let i = 0; i < 900; i++) { const d = V3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize().multiplyScalar(850); sp.push(d.x, d.y, d.z); }
@@ -495,8 +495,22 @@ const GravityCore = (() => {
         update(0.001);
     }
 
+    // Leave the Gravity Core for good (after Graton falls): put the party back in the normal world and bring the sun back.
+    function leave() {
+        const ow = overworld3d, gs = gameSystem;
+        X.active = false;
+        if (P && P.pivot) { P.pivot.remove(ow.playerObj); ow.scene.add(ow.playerObj); ow.playerObj.rotation.set(0, 0, 0); ow.scene.remove(P.pivot); }
+        if (P && P.cpivot && ow.companionObj) { P.cpivot.remove(ow.companionObj); ow.scene.add(ow.companionObj); ow.companionObj.rotation.set(0, 0, 0); ow.scene.remove(P.cpivot); }
+        if (stage && stage.group) stage.group.visible = false;
+        if (stage && stage.stars) stage.stars.visible = false;
+        if (boss && boss.root) boss.root.visible = false;
+        if (ow.sunGroup) ow.sunGroup.visible = true; if (ow.clouds) ow.clouds.visible = true; if (ow.motes) ow.motes.visible = true;
+        if (ow.sunLight) ow.sunLight.castShadow = true;
+        gs.state = 'overworld';
+    }
+
     return {
-        get active() { return X.active; }, begin, update, strike, playerAttackStarted, lookBy,
+        get active() { return X.active; }, begin, leave, update, strike, playerAttackStarted, lookBy,
         get boss() { return B; }, get player() { return P; }, get meteors() { return meteors; }, BOSS_NAME, R, C
     };
 })();

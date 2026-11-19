@@ -1287,3 +1287,40 @@ html.is-mobile #cc-confirm-btn { margin-top: 5px !important; min-height: 38px; p
     html.is-mobile #pause-ui .settings-panel button.secondary-btn, html.is-mobile #pause-ui .settings-panel .buy-btn { break-inside: avoid; margin-top: 6px !important; min-height: 36px; padding: 6px 14px; font-size: 0.85rem; }
 }
 html.is-mobile #save-indicator { left: auto !important; right: 50% !important; bottom: auto !important; top: 78px !important; transform: translateX(50%); font-size: 12px !important; padding: 4px 10px !important; }
+
+/* ---- talking to villagers: the "Press E" hint (desktop) and the 💬 button (phones) ---- */
+#talk-prompt { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); padding: 9px 20px; border-radius: 22px; background: rgba(10,16,34,0.78); color: #fff4c9; border: 2px solid #ffd166; font: 700 1.05rem 'Outfit', sans-serif; z-index: 100; pointer-events: none; box-shadow: 0 4px 16px rgba(0,0,0,0.4); animation: talkPulse 1.4s ease-in-out infinite alternate; }
+@keyframes talkPulse { from { box-shadow: 0 0 6px rgba(255,209,102,0.3); } to { box-shadow: 0 0 18px rgba(255,209,102,0.85); } }
+html.is-mobile #talk-prompt { display: none; }
+#mc-talk { display: none; right: calc(max(0px, env(safe-area-inset-right)) + 56px); bottom: 132px; width: 68px; height: 68px; font-size: 32px; background: rgba(255,209,102,0.55); border-color: #ffd166; animation: talkPulse 1.2s ease-in-out infinite alternate; }
+#mc-talk.show { display: flex; }
+
+/* --- Iolana's Kite Ring Race + the little yes / no box --- */
+#kite-hud { position: absolute; inset: 0; pointer-events: none; z-index: 60; font-family: 'Outfit', sans-serif; color: #fff; }
+#kite-top { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; padding: 8px 20px; border-radius: 26px; background: rgba(10,16,34,0.72); border: 2px solid #8ad0ff; font-weight: 800; font-size: 1.35rem; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+#kite-time.low { color: #ff7a7a; animation: talkPulse 0.5s ease-in-out infinite alternate; }
+#kite-best { font-size: 0.9rem; font-weight: 700; color: #ffe9a8; }
+#kite-best:empty { display: none; }
+#kite-compass { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+#kite-arrow { font-size: 2.2rem; color: #ffd23f; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); transition: transform 0.08s linear; }
+#kite-alt { font-weight: 800; color: #8ad0ff; min-height: 1.2em; }
+#kite-dist { font-weight: 700; font-size: 0.95rem; opacity: 0.9; }
+#kite-msg { position: absolute; top: 38%; left: 50%; transform: translate(-50%, -50%); font-weight: 900; font-size: 2.4rem; text-shadow: 0 4px 14px rgba(0,0,0,0.6); opacity: 0; transition: opacity 0.2s; white-space: nowrap; }
+#kite-msg.show { opacity: 1; }
+#kite-msg.big { font-size: 6rem; color: #ffd23f; }
+#kite-hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); padding: 7px 16px; border-radius: 14px; background: rgba(0,0,0,0.55); font-weight: 700; font-size: 0.95rem; color: #ffe9a8; white-space: nowrap; }
+#kite-quit { position: absolute; top: 64px; right: 20px; pointer-events: auto; padding: 8px 14px; border-radius: 8px; background: rgba(0,0,0,0.7); color: #fff; border: 2px solid rgba(255,255,255,0.5); font: 700 0.9rem 'Outfit', sans-serif; cursor: pointer; }
+html.is-mobile #kite-quit { top: 52px; right: max(8px, env(safe-area-inset-right)); padding: 6px 10px; font-size: 12px; }
+html.is-mobile #kite-hint { bottom: 8px; font-size: 11px; white-space: normal; max-width: 60%; text-align: center; }
+html.is-mobile #kite-top { top: 6px; font-size: 1rem; padding: 4px 14px; }
+html.is-mobile #kite-compass { top: 46px; }
+html.is-mobile #kite-msg.big { font-size: 4rem; }
+body.kite-on #mc-attack, body.kite-on #mc-jump, body.kite-on #mc-talk, body.kite-on .mc-look-zone { display: none !important; }
+#choice-box { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); padding: 16px 22px; border-radius: 14px; background: rgba(10,16,34,0.88); border: 2px solid #ffd166; box-shadow: 0 10px 30px rgba(0,0,0,0.55); pointer-events: auto; text-align: center; z-index: 120; font-family: 'Outfit', sans-serif; color: #fff; }
+#choice-text { font-weight: 800; font-size: 1.25rem; margin-bottom: 12px; color: #fff4c9; }
+#choice-btns { display: flex; gap: 14px; justify-content: center; }
+#choice-btns button { padding: 10px 26px; border-radius: 10px; border: 2px solid #ffd166; background: rgba(255,209,102,0.18); color: #fff; font: 800 1.05rem 'Outfit', sans-serif; cursor: pointer; }
+#choice-btns button:hover, #choice-btns button:active { background: rgba(255,209,102,0.5); }
+html.is-mobile #choice-box { bottom: 10px; padding: 10px 16px; }
+html.is-mobile #choice-text { font-size: 1rem; margin-bottom: 8px; }
+body.kite-on #compass, body.kite-on #objective { display: none !important; }

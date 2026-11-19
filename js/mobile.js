@@ -10,7 +10,7 @@
 const Mobile = (() => {
     const on = !!window.IS_MOBILE;
     const stick = { x: 0, y: 0, active: false };
-    let root = null, stickZone, lookZone, base, knob, atkBtn, jumpBtn, hint, built = false, wasPlaying = false;
+    let root = null, stickZone, lookZone, base, knob, atkBtn, jumpBtn, talkBtn, hint, built = false, wasPlaying = false;
     let stickId = null, lookId = null, ox = 0, oy = 0, lx = 0, ly = 0, atkTimer = null;
     const STICK_R = 58;
 
@@ -58,9 +58,10 @@ const Mobile = (() => {
         base = el('div', 'mc-stick-base'); knob = el('div', 'mc-stick-knob'); base.appendChild(knob);
         atkBtn = el('div', 'mc-btn', '⚔'); atkBtn.id = 'mc-attack';
         jumpBtn = el('div', 'mc-btn', '⤒'); jumpBtn.id = 'mc-jump';
+        talkBtn = el('div', 'mc-btn', '💬'); talkBtn.id = 'mc-talk';
         const jl = el('div', 'mc-btn-label', 'JUMP / GLIDE'); jumpBtn.appendChild(jl);
         hint = el('div', 'mc-hint', 'Left thumb: move   ·   Drag on the right: look   ·   ⚔ attack   ·   ⤒ jump (hold in air to glide)');
-        root.append(lookZone, stickZone, base, atkBtn, jumpBtn, hint);
+        root.append(lookZone, stickZone, base, atkBtn, jumpBtn, talkBtn, hint);
         overworld3d.stick = stick;
 
         // --- joystick: appears wherever the left thumb lands
@@ -88,11 +89,15 @@ const Mobile = (() => {
         jumpBtn.addEventListener('pointerdown', (e) => { jumpBtn.setPointerCapture(e.pointerId); jumpBtn.classList.add('down'); overworld3d.keys[' '] = true; });
         ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => jumpBtn.addEventListener(ev, () => { jumpBtn.classList.remove('down'); overworld3d.keys[' '] = false; }));
 
+        // talk: the 💬 button appears when a villager is next to you
+        talkBtn.addEventListener('pointerdown', () => overworld3d.tryTalk());
+
         // show the controls only while you're actually playing (not in dialogue, menus, shops or cutscenes)
         setInterval(() => {
             const gs = window.gameSystem;
-            const playing = !!(gs && overworld3d.playerObj && (gs.state === 'overworld' || gs.state === 'gauntlet' || gs.state === 'core') && !gs.isCutscene);
+            const playing = !!(gs && overworld3d.playerObj && (gs.state === 'overworld' || gs.state === 'gauntlet' || gs.state === 'core' || gs.state === 'kite') && !gs.isCutscene);
             root.classList.toggle('mc-off', !playing);
+            talkBtn.classList.toggle('show', playing && !!overworld3d.nearVillager);
             if (!playing && wasPlaying) releaseAll();
             wasPlaying = playing;
             if (playing && !showHint.done) showHint();

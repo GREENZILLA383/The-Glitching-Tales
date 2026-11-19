@@ -214,6 +214,7 @@ const Sound = (() => {
         reef:    { bpm: 92,  root: 62, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [-5, -1, 2, 6], [-3, 0, 4, 7], [-7, -3, 0, 4]], mel: 0.5, pluck: 'bell', padLp: 800, drone: true },
         core:    { bpm: 138, root: 43, scale: [0, 2, 3, 7, 8, 10], prog: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-7, -4, 0]], mel: 0.6, pluck: 'sawtooth', padLp: 600, drums: true, padType: 'sawtooth', drone: true },
         dunes:   { bpm: 84,  root: 57, scale: [0, 1, 4, 5, 7, 8, 10], prog: [[0, 4, 7], [1, 5, 8], [0, 4, 7], [-2, 2, 5]], mel: 0.36, pluck: 'triangle', padLp: 700, drone: true, thump: false },
+        sky:     { bpm: 88,  root: 65, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [5, 9, 12], [7, 11, 14], [4, 7, 11]], mel: 0.5, pluck: 'bell', padLp: 1500, arp: true },
         flow:    { bpm: 104, root: 64, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7], [-3, 0, 4], [-8, -4, -1], [-5, -1, 2]], mel: 0.7, pluck: 'sine', padLp: 1200, arp: true },
     };
 
@@ -314,6 +315,7 @@ const Sound = (() => {
         else if (mood === 'reef') { f = 320; v = 0.1; q = 0.7; }
         else if (mood === 'core') { f = 120; v = 0.08; q = 0.9; }
         else if (mood === 'dunes') { f = 900; v = 0.12; q = 0.35; }   // hot wind across open sand
+        else if (mood === 'sky') { f = 1100; v = 0.1; q = 0.3; }   // high, clean wind above the clouds
         else if (mood === 'sea') { f = 450; v = 0.09; q = 0.5; }
         else if (mood === 'temple' || mood === 'boss') { f = 260; v = 0.05; q = 1; }
         else if (mood === 'gauntlet') { f = 150; v = 0.1; }

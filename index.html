@@ -64,6 +64,21 @@
 
             <!-- Transient notification toast (non-blocking) -->
             <div id="game-toast"></div>
+            <div id="talk-prompt" class="hidden"></div>
+
+            <!-- Iolana's Kite Ring Race: the on-screen timer, ring counter and arrow -->
+            <div id="kite-hud" class="hidden">
+                <div id="kite-top"><span id="kite-time">0.0s</span><span id="kite-rings">0 / 12</span><span id="kite-best"></span></div>
+                <div id="kite-compass"><div id="kite-arrow">▲</div><div id="kite-alt"></div><div id="kite-dist"></div></div>
+                <div id="kite-msg"></div>
+                <div id="kite-hint"></div>
+                <button id="kite-quit">✕ Quit race</button>
+            </div>
+            <!-- A little yes / no question (used by Iolana's race offer) -->
+            <div id="choice-box" class="hidden">
+                <div id="choice-text"></div>
+                <div id="choice-btns"><button id="choice-yes">Yes</button><button id="choice-no">No</button></div>
+            </div>
         </div>
 
         <!-- Mobile Controls Overlay (Hidden by default via CSS) -->
@@ -276,6 +291,8 @@
     <script src="js/voxel.js"></script>
     <script src="js/models3d.js"></script>
     <script src="js/animations.js"></script>
+    <script src="js/villagers.js"></script>
+    <script src="js/kiterace.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/combat3d.js"></script>
     <script src="js/overworld3d.js"></script>

@@ -37,6 +37,11 @@ const VILLAGE = { x: 0, z: DESERT_END_Z + 105 };
 const QUICKSAND = { x: -38, z: VILLAGE.z - 30, r: 9 };
 // Boat voyage: a small stretch of open sea, built far off to the side of the world (only used in the cutscene)
 const SEA = { x: 1400, z: -760 };
+// The Sky Kingdom (Chapter 4): a cloud city far off to the side, reached by riding a giant friendly cloud. (Its z is past the dunes so dune hills never reach it.)
+const SKY = { x: -2200, z: DESERT_END_Z - 600 };
+const SKY_RADIUS = 150;
+// Makani Village (Chapter 4): a village of cloud roads and houses held up by clouds, a long cloud road north of the cloud city.
+const MAKANI = { x: SKY.x, z: SKY.z - 340 };
 
 class Overworld3D {
     constructor() {
@@ -109,6 +114,8 @@ class Overworld3D {
         this.arenaTriggered = false;      // Oblongtalo's challenge has started
         this.reefReached = false;         // the wave has carried the player into the Coral Reef
         this.desertReached = false;       // Oblongtalo sent the player to the Dunes of Force (Chapter 3)
+        this.metVillagers = new Set();    // Makani villagers you have talked to
+        this.nearVillager = null; this.talkingTo = null;
         this.desertEndTriggered = false;
         this.dunes = [];                  // the shifting dunes
         this.voyage = null;               // the boat cutscene, while it runs
@@ -395,6 +402,12 @@ class Overworld3D {
             this.motes.geometry.attributes.position.needsUpdate = true;
             this.motes.material.color.copy(this.moteColorCoast).lerp(this.moteColorOcean, ocean);
         }
+        this.updateTalkPrompt();
+        if (this.skyReached && this.makaniVanes) this.makaniVanes.forEach(v => { v.g.rotation.z = v.ph + t * v.sp; });   // windmills and pinwheels
+        if (this.skyReached && this.skyCloud && this.skyCloud.visible && !this.skyRide) {   // the parked cloud bobs gently
+            this.skyCloud.position.y = 3.4 + Math.sin(t * 1.3) * 0.35;
+            this.animateSkyCloud(this.skyCloud, t, 0.5);
+        }
         if (this.desertReached) {
             this.updateDunes();
             const q = this.quicksand;
@@ -489,6 +502,10 @@ class Overworld3D {
         this.desertFogColor = new THREE.Color(0xf2dba8); this.desertSkyTop = new THREE.Color(0x6bb3ea);
         this.hemiSkyDesert = new THREE.Color(0xfff2d6);  this.hemiGroundDesert = new THREE.Color(0xd9ab62);
         this.sunDesert = new THREE.Color(0xffe2a0);
+        // The Sky Kingdom: a bright, clean, airy blue day high above the clouds
+        this.skyFogColor = new THREE.Color(0xeaf4ff);    this.skySkyTop = new THREE.Color(0x3d9cf2);
+        this.hemiSkyAir = new THREE.Color(0xffffff);     this.hemiGroundAir = new THREE.Color(0xb9d4f2);
+        this.sunAir = new THREE.Color(0xfff8e6);
 
         // ---- Clean ground in uniform bands: grass coast -> sandy beach -> ocean floor ----
         const makeGround = (zNorth, zSouth, tex) => {
@@ -544,6 +561,8 @@ class Overworld3D {
             base: '#e3c079', light: '#f6e2ad', dark: '#c79a52', blades: false, ripples: true,
             patches: ['#efd18d', '#d9ae62', '#c99a52', '#f3dca4', '#b98a48', '#e8c77f']
         }));
+        this.buildSkyKingdom();   // (Chapter 4 goes last, too)
+        this.buildMakaniVillage();
 
         // Record every small top-level prop so we can hide the ones far beyond the fog each frame
         // (big things like the ground, temple and cliff walls are left alone).
@@ -567,6 +586,7 @@ class Overworld3D {
         let mood = 'wild';
         if (gs.state === 'gauntlet' || this.oblongtaloMesh) mood = 'gauntlet';
         else if (croton && Math.hypot(p.x - croton.mesh.position.x, p.z - croton.mesh.position.z) < 45) mood = 'boss';
+        else if (this.skyReached) mood = 'sky';
         else if (this.desertReached) mood = 'dunes';
         else if (this.reefReached && p.z < REEF_START_Z + 30 && p.z > REEF_END_Z - 6) mood = 'reef';
         else if (p.z < WORLD.oceanStartZ + 12) mood = 'ocean';
@@ -2598,6 +2618,433 @@ class Overworld3D {
     }
 
     // =====================================================================================
+    //  CHAPTER 4: THE SKY KINGDOM  (a cloud city, reached by riding a giant friendly cloud)
+    // =====================================================================================
+
+    // The cloud city: a round cloud with a plaza, a fountain, white towers with colourful roofs, cottages and floating islands.
+    buildSkyKingdom() {
+        const g = this.worldGroup, C = SKY;
+        const M = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.92 }, extra));
+        const cloudMat = M(0xffffff, { emissive: 0xd4e4f8, emissiveIntensity: 0.65 });
+        const stone = M(0xf4f1ec), band = M(0xc3d4ee), rock = M(0x8f9aa8, { flatShading: true });
+        const glass = M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.9 });
+        const water = M(0x8fdcff, { emissive: 0x3aa8e8, emissiveIntensity: 0.8, roughness: 0.2 });
+        const roofs = [0x4aa3e8, 0xf07aa8, 0x7ad0c0, 0xf2b84a, 0x9a86e8].map(c => M(c, { roughness: 0.6 }));
+        const sphere = new THREE.SphereGeometry(1, 14, 10);
+        const put = (mesh, x, y, z, parent) => { mesh.position.set(x, y, z); parent.add(mesh); return mesh; };
+        const mesh = (geo, mat) => new THREE.Mesh(geo, mat);
+
+        // --- the round cloud itself, a soft underside, and an endless sea of clouds far below ---
+        const tex = this.makeGroundTexture({ base: '#f6faff', light: '#ffffff', dark: '#d3e3f6', blades: false, patches: ['#eaf3ff', '#dcebfb', '#fdfdff', '#cfe0f5', '#f3ecff'] });
+        tex.repeat.set(300 / 70, 300 / 70); this._skyTex = tex;
+        const floor = mesh(new THREE.CircleGeometry(SKY_RADIUS + 2, 56), new THREE.MeshStandardMaterial({ map: tex, roughness: 1, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.5 }));
+        floor.rotation.x = -Math.PI / 2; floor.position.set(C.x, 0, C.z); floor.receiveShadow = true; g.add(floor);
+        const under = mesh(sphere, cloudMat); under.scale.set(SKY_RADIUS, 40, SKY_RADIUS); under.position.set(C.x, -42, C.z); g.add(under);
+        const sea = mesh(new THREE.PlaneGeometry(3600, 3600), M(0x8fbbea, { emissive: 0x5f93d0, emissiveIntensity: 0.55, roughness: 1 }));
+        sea.rotation.x = -Math.PI / 2; sea.position.set(C.x, -75, C.z); g.add(sea);
+        // fluffy puffs: a ring round the rim of the city, and lumps scattered over the cloud sea (one draw call)
+        const RIM = 48, FAR = 150, N = RIM + FAR, puffs = new THREE.InstancedMesh(sphere, cloudMat, N), m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+        for (let i = 0; i < N; i++) {
+            let x, y, z, s;
+            if (i < RIM) { const a = i / RIM * Math.PI * 2 + Math.random() * 0.1; s = 7 + Math.random() * 8; x = Math.cos(a) * (SKY_RADIUS - 2); z = Math.sin(a) * (SKY_RADIUS - 2); y = Math.random() * 3; }
+            else { const a = Math.random() * Math.PI * 2, r = 190 + Math.random() * 800; s = 25 + Math.random() * 45; x = Math.cos(a) * r; z = Math.sin(a) * r; y = -85 + Math.random() * 28; }
+            m4.compose(new THREE.Vector3(C.x + x, y, C.z + z), q, new THREE.Vector3(s, s * 0.55, s)); puffs.setMatrixAt(i, m4);
+        }
+        puffs.frustumCulled = false; g.add(puffs);
+
+        // --- the central plaza and the cloud fountain ---
+        const plaza = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(30, 31, 0.8, 40), stone), 0, 0.4, 0, plaza);
+        put(mesh(new THREE.TorusGeometry(30.5, 0.7, 8, 48), band), 0, 0.8, 0, plaza).rotation.x = Math.PI / 2;
+        plaza.position.set(C.x, 0, C.z); g.add(plaza);
+        const fountain = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(7, 7.6, 1.6, 24), band), 0, 1.6, 0, fountain);
+        put(mesh(new THREE.CylinderGeometry(6, 6, 0.3, 24), water), 0, 2.45, 0, fountain);
+        put(mesh(new THREE.CylinderGeometry(1, 1.5, 6, 12), stone), 0, 5, 0, fountain);
+        const orb = put(mesh(new THREE.SphereGeometry(1.8, 16, 12), water), 0, 9, 0, fountain);
+        put(mesh(new THREE.TorusGeometry(3, 0.25, 6, 24), glass), 0, 9, 0, fountain).rotation.x = Math.PI / 2.4;
+        this.addProp(fountain, C.x, C.z, { shrink: 0.5 });
+        this.skyOrb = orb;
+
+        // --- the landing pad where the giant cloud sets you down (south edge of the city) ---
+        const pad = new THREE.Group();
+        put(mesh(new THREE.CylinderGeometry(15, 15.5, 0.7, 36), stone), 0, 0.35, 0, pad);
+        put(mesh(new THREE.TorusGeometry(12.5, 0.4, 6, 40), glass), 0, 0.75, 0, pad).rotation.x = Math.PI / 2;
+        put(mesh(new THREE.TorusGeometry(7, 0.3, 6, 32), band), 0, 0.75, 0, pad).rotation.x = Math.PI / 2;
+        pad.position.set(C.x, 0, C.z + 96); g.add(pad);
+
+        // --- white towers with colourful cone roofs, and little round cottages, ringed round the plaza ---
+        const tower = (r, h, roof) => {
+            const t = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(r, r * 1.08, h, 14), stone), 0, h / 2, 0, t);
+            put(mesh(new THREE.CylinderGeometry(r * 1.12, r * 1.12, 0.8, 14), band), 0, h * 0.55, 0, t);
+            put(mesh(new THREE.ConeGeometry(r * 1.4, r * 1.9, 14), roof), 0, h + r * 0.95, 0, t);
+            for (let k = 0; k < 3; k++) { const a = k * 2.1 + 0.4; const w = put(mesh(new THREE.BoxGeometry(0.9, 1.7, 0.3), glass), Math.sin(a) * r, h * (0.7 - (k % 2) * 0.28), Math.cos(a) * r, t); w.rotation.y = a; }
+            return t;
+        };
+        const cottage = (r, roof) => {
+            const t = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(r, r * 1.05, 5, 12), stone), 0, 2.5, 0, t);
+            const dome = put(mesh(sphere, roof), 0, 5, 0, t); dome.scale.set(r * 1.25, r * 0.9, r * 1.25);
+            put(mesh(new THREE.BoxGeometry(1.5, 2.6, 0.3), glass), 0, 1.3, r, t);
+            return t;
+        };
+        for (let i = 0; i < 18; i++) {
+            const a = i / 18 * Math.PI * 2 + 0.17, ring = i % 3, rr = 58 + ring * 24 + Math.random() * 6;
+            const x = Math.cos(a) * rr, z = Math.sin(a) * rr;
+            if (Math.abs(x) < 17 && Math.abs(z) > 8) continue;      // keep the roads open: south to the landing pad, north to Makani Village
+            const b = ring === 1 ? cottage(3.6 + Math.random() * 1.2, roofs[i % 5]) : tower(4.6 + Math.random() * 2, 14 + Math.random() * 16, roofs[(i + 2) % 5]);
+            b.rotation.y = -a + Math.PI / 2;
+            this.addProp(b, C.x + x, C.z + z, { shrink: 0.4 });
+        }
+        this.buildSignpost(C.x + 11, C.z + 84, ['Sky Kingdom', 'Cloud City: ahead']);
+
+        // --- little floating islands drifting around the city (just for the view) ---
+        for (let i = 0; i < 7; i++) {
+            const isl = new THREE.Group(), a = i / 7 * Math.PI * 2 + 0.4, rr = 215 + (i % 3) * 30, s = 0.7 + Math.random() * 0.8;
+            const cone = put(mesh(new THREE.ConeGeometry(14, 20, 7), rock), 0, -10, 0, isl); cone.rotation.x = Math.PI;
+            put(mesh(new THREE.CylinderGeometry(15, 14, 2.4, 14), stone), 0, 1.2, 0, isl);
+            if (i % 2 === 0) put(mesh(new THREE.CylinderGeometry(2.6, 3, 9, 10), stone), 0, 6.5, 0, isl); put(mesh(new THREE.ConeGeometry(3.6, 5, 10), roofs[i % 5]), 0, i % 2 === 0 ? 13.5 : 4.5, 0, isl);
+            isl.scale.setScalar(s); isl.position.set(C.x + Math.cos(a) * rr, 14 + (i * 13) % 42, C.z + Math.sin(a) * rr);
+            const ix = isl.position.x, iz = isl.position.z;   // (keep the view-only islands out of Makani Village and its road)
+            if (Math.hypot(ix - MAKANI.x, iz - MAKANI.z) > 170 && !(Math.abs(ix - C.x) < 80 && iz < C.z - 100 && iz > MAKANI.z - 20)) g.add(isl);
+        }
+    }
+
+    // =====================================================================================
+    //  MAKANI VILLAGE (Chapter 4): a wind village of cloud roads and houses held up by clouds
+    // =====================================================================================
+
+    // A villager of Makani: a few merged meshes (static body, the head, the scarf), standing on the cloud.
+    spawnVillager(v, x, z, yaw) {
+        const mesh = buildVillager3D(v);
+        const head = mesh.getObjectByName('head'), scarf = mesh.getObjectByName('scarf');
+        if (head) this.mergeGroup(head, { own: true, castShadow: false });
+        if (scarf) this.mergeGroup(scarf, { own: true, castShadow: false });
+        this.mergeGroup(mesh, { own: true, castShadow: false, exclude: [head, scarf].filter(Boolean) });
+        mesh.scale.setScalar(0.95); mesh.position.set(x, 0, z); mesh.rotation.y = yaw;
+        this.scene.add(mesh);
+        this.entities.push({ type: 'villager', mesh, v, radius: 6 });
+        this.colliders.push(new THREE.Box3(new THREE.Vector3(x - 1.1, 0, z - 1.1), new THREE.Vector3(x + 1.1, 5, z + 1.1)));
+    }
+
+    // Find the villager you're standing next to (so you can talk) and show / hide the "press E" hint.
+    updateTalkPrompt() {
+        const gs = window.gameSystem, el = document.getElementById('talk-prompt');
+        let near = null;
+        if (this.skyReached && this.playerObj && gs.state === 'overworld' && !gs.isCutscene && !this.skyRide && !this.voyage) {
+            const p = this.playerObj.position; let best = 49;
+            for (const e of this.entities) {
+                if (e.type !== 'villager' || !e.mesh.visible) continue;
+                const dx = e.mesh.position.x - p.x, dz = e.mesh.position.z - p.z, d2 = dx * dx + dz * dz;
+                if (d2 < best) { best = d2; near = e; }
+            }
+        }
+        this.nearVillager = near;
+        if (el) {
+            if (near && !this.isMobile) { el.textContent = '💬  Press E to talk to ' + near.v.name; el.classList.remove('hidden'); }
+            else el.classList.add('hidden');
+        }
+    }
+
+    // Talk to the villager next to you (the E key, or the 💬 button on a phone).
+    tryTalk() {
+        const e = this.nearVillager, gs = window.gameSystem;
+        if (!e || gs.state !== 'overworld' || gs.isCutscene) return;
+        this.talkingTo = e;
+        gs.talkToVillager(e);
+    }
+
+    // Can the player stand here? The city's round cloud, the cloud road, and every cloud of Makani Village.
+    skyWalkable(x, z) {
+        if (Math.hypot(x - SKY.x, z - SKY.z) < SKY_RADIUS - 6) return true;
+        const sh = this.skyShapes;
+        if (!sh) return false;
+        for (let i = 0; i < sh.length; i++) {
+            const a = sh[i];
+            if (a.t === 0) { if (Math.hypot(x - a.x, z - a.z) < a.r - 1.5) return true; }
+            else {
+                const vx = a.bx - a.ax, vz = a.bz - a.az, l2 = vx * vx + vz * vz;
+                const u = Math.max(0, Math.min(1, ((x - a.ax) * vx + (z - a.az) * vz) / l2));
+                if (Math.hypot(x - (a.ax + vx * u), z - (a.az + vz * u)) < a.hw - 1.2) return true;
+            }
+        }
+        return false;
+    }
+
+    buildMakaniVillage() {
+        const g = this.worldGroup, V = MAKANI, C = SKY, rnd = Math.random;
+        const M = (color, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.9 }, extra));
+        const tex = this._skyTex;
+        const layer = (off) => new THREE.MeshStandardMaterial({ map: tex, roughness: 1, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.5, polygonOffset: true, polygonOffsetFactor: off, polygonOffsetUnits: off });
+        const roadMat = layer(-1), plotMat = layer(-2), plazaMat = layer(-3);
+        const cloudMat = M(0xffffff, { emissive: 0xd4e4f8, emissiveIntensity: 0.65 });
+        const stone = M(0xf4f1ec), band = M(0xc3d4ee);
+        const pastel = [0xffd6e0, 0xcdeaff, 0xfff0b8, 0xd6f5d6, 0xe6d9ff, 0xffe0c4, 0xc9f2ee, 0xf7d3f0];
+        const roofC = [0xf0627f, 0x3f8fe8, 0xf2b236, 0x4cc29a, 0x8c6cf0, 0xff8a4a, 0x2fb5c4, 0xd860c8];
+        const sphere = new THREE.SphereGeometry(1, 12, 9);
+        const mesh = (geo, mat) => new THREE.Mesh(geo, mat);
+        const put = (m, x, y, z, parent) => { m.position.set(x, y, z); parent.add(m); return m; };
+        this.skyShapes = []; this.makaniVanes = [];
+        const puffs = [];                                       // every cloud puff of the village (one instanced draw call)
+        const puff = (x, y, z, sx, sy, sz) => puffs.push([x, y, z, sx, sy, sz]);
+        const flat = (geo, mat, x, z, y) => { const m = mesh(geo, mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); m.receiveShadow = true; g.add(m); return m; };
+
+        // ---- cloud shapes (the places you can walk) ----
+        const disc = (x, z, r, mat, y = 0.03) => {
+            flat(new THREE.CircleGeometry(r, 48), mat, x, z, y);
+            this.skyShapes.push({ t: 0, x, z, r });
+            const n = Math.ceil(r * 0.9);                            // a fluffy low rim all round
+            for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + rnd() * 0.2, s = 2.6 + rnd() * 2.4; puff(x + Math.cos(a) * (r - 1), rnd() * 1.6, z + Math.sin(a) * (r - 1), s, s * 0.55, s); }
+            for (let k = 0; k < 6; k++) { const a = rnd() * 6.28, rr = rnd() * r * 0.55, s = r * (0.35 + rnd() * 0.3); puff(x + Math.cos(a) * rr, -7 - rnd() * 7, z + Math.sin(a) * rr, s, s * 0.7, s); }   // the cloud's fat belly
+            for (let k = 0; k < 6; k++) { const s = r * (0.5 - k * 0.07); puff(x + (rnd() - 0.5) * 3, -18 - k * 9, z + (rnd() - 0.5) * 3, s, s * 0.8, s); }                 // a tall column of cloud holding it up
+        };
+        const road = (ax, az, bx, bz, hw, y = 0.02) => {
+            const len = Math.hypot(bx - ax, bz - az);
+            const rg = new THREE.PlaneGeometry(hw * 2, len); rg.rotateX(-Math.PI / 2);       // lies flat, its length running along z
+            const rm = mesh(rg, roadMat); rm.position.set((ax + bx) / 2, y, (az + bz) / 2); rm.rotation.y = Math.atan2(bx - ax, bz - az); rm.receiveShadow = true; g.add(rm);   // ...then spin it to point from a to b
+            this.skyShapes.push({ t: 1, ax, az, bx, bz, hw });
+            const n = Math.ceil(len / 8);
+            for (let i = 0; i <= n; i++) {                                   // fluffy edges and a soft belly under the road
+                const u = i / n, x = ax + (bx - ax) * u, z = az + (bz - az) * u, nx = (bz - az) / len, nz = -(bx - ax) / len;
+                [-1, 1].forEach(sd => { const s = 1.8 + rnd() * 1.6; puff(x + nx * sd * (hw - 0.8), rnd() * 1.2, z + nz * sd * (hw - 0.8), s, s * 0.55, s); });
+                if (i % 2 === 0) { const s = hw * (1.2 + rnd() * 0.6); puff(x, -4 - rnd() * 5, z, s, s * 0.6, s); }
+            }
+        };
+
+        // ---- the central plaza + the Great Windmill ----
+        disc(V.x, V.z, 28, plazaMat, 0.05);
+        const plaza = new THREE.Group();
+        put(mesh(new THREE.TorusGeometry(24, 0.5, 6, 56), band), 0, 0.2, 0, plaza).rotation.x = Math.PI / 2;
+        put(mesh(new THREE.TorusGeometry(10, 0.4, 6, 40), band), 0, 0.2, 0, plaza).rotation.x = Math.PI / 2;
+        const windmill = (h, bl, roof, spd) => {
+            const w = new THREE.Group();
+            put(mesh(new THREE.CylinderGeometry(h * 0.16, h * 0.26, h, 14), stone), 0, h / 2, 0, w);
+            put(mesh(new THREE.CylinderGeometry(h * 0.285, h * 0.285, 0.7, 14), band), 0, h * 0.5, 0, w);
+            put(mesh(new THREE.ConeGeometry(h * 0.26, h * 0.3, 14), M(roof, { roughness: 0.6 })), 0, h + h * 0.13, 0, w);
+            put(mesh(new THREE.SphereGeometry(h * 0.07, 10, 8), M(0xf2b236)), 0, h * 0.9, h * 0.17, w);
+            const blades = new THREE.Group(); blades.position.set(0, h * 0.9, h * 0.2); w.add(blades);
+            for (let k = 0; k < 4; k++) {
+                const arm = new THREE.Group(); arm.rotation.z = k * Math.PI / 2; blades.add(arm);
+                put(mesh(new THREE.BoxGeometry(h * 0.04, bl, h * 0.02), M(0x7a5a3a)), 0, bl / 2, 0, arm);
+                put(mesh(new THREE.BoxGeometry(bl * 0.2, bl * 0.8, h * 0.012), M(k % 2 ? 0xffffff : roof)), bl * 0.12, bl * 0.55, 0, arm);
+            }
+            this.makaniVanes.push({ g: blades, sp: spd, ph: rnd() * 6 });
+            return { w, blades };
+        };
+        const great = windmill(26, 15, 0xf0627f, 0.5); great.w.position.set(0, 0, 0); plaza.add(great.w);
+        // colourful flags strung between posts round the plaza
+        for (let i = 0; i < 12; i++) {
+            const a = i / 12 * Math.PI * 2, px = Math.cos(a) * 20, pz = Math.sin(a) * 20;
+            put(mesh(new THREE.CylinderGeometry(0.15, 0.2, 7, 6), M(0x7a5a3a)), px, 3.5, pz, plaza);
+            const na = a + Math.PI / 12; const fx = Math.cos(na) * 20.3, fz = Math.sin(na) * 20.3;
+            const f = put(mesh(new THREE.PlaneGeometry(3.4, 1.8), M(roofC[i % 8], { side: THREE.DoubleSide })), fx, 6, fz, plaza); f.rotation.y = -na + Math.PI / 2;
+        }
+        plaza.position.set(V.x, 0, V.z);
+        this.mergeGroup(plaza, { flat: true, castShadow: false, exclude: [great.blades] });
+        g.add(plaza);
+        this.colliders.push(new THREE.Box3(new THREE.Vector3(V.x - 6, 0, V.z - 6), new THREE.Vector3(V.x + 6, 30, V.z + 6)));   // the windmill tower is solid (the spinning blades are high above your head)
+
+        // ---- a house of Makani: a round pod with a big cone roof, round windows and its own little windmill ----
+        const house = (idx) => {
+            const h = new THREE.Group(), body = M(pastel[idx % 8]), roof = M(roofC[idx % 8], { roughness: 0.6 });
+            put(mesh(new THREE.CylinderGeometry(4.4, 4.7, 5.4, 14), body), 0, 2.7, 0, h);
+            put(mesh(new THREE.CylinderGeometry(4.8, 4.8, 0.7, 14), band), 0, 5.5, 0, h);
+            put(mesh(new THREE.ConeGeometry(6.2, 4.6, 14), roof), 0, 8.1, 0, h);
+            for (let k = 0; k < 3; k++) { const a = Math.PI * 0.55 + k * 1.6 + 0.4; const wnd = put(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.4, 12), M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.8 })), Math.sin(a) * 4.45, 3.2, Math.cos(a) * 4.45, h); wnd.rotation.order = 'YXZ'; wnd.rotation.set(0, a - Math.PI / 2, Math.PI / 2); }
+            put(mesh(new THREE.BoxGeometry(1.8, 3, 0.5), M(0x6a4a34)), 0, 1.5, 4.5, h);                  // door (faces +z)
+            put(mesh(new THREE.SphereGeometry(0.2, 8, 6), M(0xf2b236)), 0.5, 1.5, 4.8, h);               // door knob
+            const wm = windmill(5.2, 3, roofC[(idx + 3) % 8], 1.4 + (idx % 3) * 0.5);                      // a tiny windmill on the roof
+            wm.w.position.set(0, 10.2, 0); wm.w.scale.setScalar(0.75); h.add(wm.w);
+            return { h, vane: wm.blades };
+        };
+        const pinwheel = (x, z, idx, parent) => {
+            put(mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 5), M(0x7a5a3a)), x, 1.5, z, parent);
+            const bl = new THREE.Group(); bl.position.set(x, 3.1, z + 0.12); parent.add(bl);
+            for (let k = 0; k < 4; k++) { const arm = new THREE.Group(); arm.rotation.z = k * Math.PI / 2; bl.add(arm); put(mesh(new THREE.BoxGeometry(0.9, 1.2, 0.05), M(roofC[(idx + k) % 8], { side: THREE.DoubleSide })), 0.45, 0.6, 0, arm); }
+            this.makaniVanes.push({ g: bl, sp: 3 + rnd() * 2, ph: rnd() * 6 });
+            return bl;
+        };
+
+        // ---- eight house-clouds in a ring, joined to the plaza by roads and to each other by a ring road ----
+        const plots = [];
+        for (let i = 0; i < 8; i++) {
+            const a = i / 8 * Math.PI * 2 + 0.2, rr = 74 + (i % 2) * 8, px = V.x + Math.sin(a) * rr, pz = V.z + Math.cos(a) * rr;
+            plots.push({ x: px, z: pz, a });
+            disc(px, pz, 13, plotMat, 0.04);
+            road(V.x + Math.sin(a) * 24, V.z + Math.cos(a) * 24, px, pz, 5);
+            const { h, vane } = house(i);
+            h.rotation.y = Math.atan2(V.x - px, V.z - pz) + (rnd() - 0.5) * 0.3;
+            h.position.set(px, 0, pz);
+            const flatParts = []; h.traverse(o => { if (o.isMesh) flatParts.push(o); });
+            this.mergeGroup(h, { flat: true, castShadow: false, exclude: [vane] });
+            g.add(h); this.addCollider(h, { shrink: 1.5 });
+            // pinwheels and a puffy bush on the plot
+            const dec = new THREE.Group(); dec.position.set(px, 0, pz); g.add(dec);
+            [[-8.6, 3, 0], [8.4, 1.5, 1], [7.4, -5.5, 2]].forEach(([dx, dz, k]) => pinwheel(dx, dz, i + k, dec));
+            puff(px + 9, 1.4, pz - 7, 2.6, 1.7, 2.6); puff(px - 9, 1.2, pz - 6, 2.2, 1.5, 2.2);
+        }
+        for (let i = 0; i < 8; i++) { const A = plots[i], B = plots[(i + 1) % 8]; road(A.x, A.z, B.x, B.z, 3.6, 0.015); }
+        // ---- the villagers: one standing outside each house, looking toward the plaza ----
+        plots.forEach((pl, i) => { const dx = V.x - pl.x, dz = V.z - pl.z, L = Math.hypot(dx, dz); this.spawnVillager(VILLAGERS[i], pl.x + dx / L * 9.5 + dz / L * 2.4, pl.z + dz / L * 9.5 - dx / L * 2.4, Math.atan2(dx, dz)); });
+
+        // ---- the long cloud road from the cloud city, with lanterns and kites along it ----
+        const rx0 = C.x, rz0 = C.z - 112, rx1 = V.x, rz1 = V.z + 26;
+        road(rx0, rz0, rx1, rz1, 7);
+        const lamps = new THREE.Group(), kite = [0xf0627f, 0x3f8fe8, 0xf2b236, 0x4cc29a, 0x8c6cf0, 0xff8a4a];
+        const len = Math.hypot(rx1 - rx0, rz1 - rz0), nx = (rz1 - rz0) / len, nz = -(rx1 - rx0) / len;
+        for (let d = 24, i = 0; d < len - 20; d += 30, i++) {
+            [-1, 1].forEach((sd, j) => {
+                const x = rx0 + (rx1 - rx0) * d / len + nx * sd * 6, z = rz0 + (rz1 - rz0) * d / len + nz * sd * 6;
+                put(mesh(new THREE.CylinderGeometry(0.2, 0.28, 5.4, 6), M(0x7a5a3a)), x, 2.7, z, lamps);
+                put(mesh(new THREE.SphereGeometry(0.9, 10, 8), M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.9 })), x, 5.9, z, lamps);
+                if ((i + j) % 2 === 0) { const k = put(mesh(new THREE.PlaneGeometry(2.2, 2.2), M(kite[(i + j) % 6], { side: THREE.DoubleSide })), x + nx * sd * 1.6, 9.2 + (i % 3), z + nz * sd * 1.6, lamps); k.rotation.set(0.2, Math.atan2(nx, nz), Math.PI / 4); }
+            });
+        }
+        this.mergeGroup(lamps, { flat: true, castShadow: false }); g.add(lamps);
+
+        // ---- all the cloud puffs, in one draw call ----
+        const inst = new THREE.InstancedMesh(sphere, cloudMat, puffs.length), m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion();
+        puffs.forEach((p, i) => { m4.compose(new THREE.Vector3(p[0], p[1], p[2]), q0, new THREE.Vector3(p[3], p[4], p[5])); inst.setMatrixAt(i, m4); });
+        inst.frustumCulled = false; g.add(inst);
+
+        // ---- signs ----
+        this.buildSignpost(C.x + 12, C.z - 128, ['Makani Village', 'Follow the cloud road north']);
+        this.buildSignpost(V.x + 11, V.z + 46, ['MAKANI VILLAGE', 'Where the wind lives']);
+    }
+
+    // The friendly giant cloud that carries you up: a puffy white body with a smiling face and a wispy tail.
+    // It faces -z at rest; the passengers sit on its flat, fluffy top (surface at y ~ 1.9).
+    buildSkyCloud() {
+        const M = (c, e = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 1, emissive: 0x6f86aa, emissiveIntensity: 0.32 }, e));
+        const white = M(0xffffff), tint = M(0xe4efff), shade = M(0xcddcf4), wisp = M(0xf4f8ff, { transparent: true, opacity: 0.78 });
+        const pink = new THREE.MeshStandardMaterial({ color: 0xffa8c0, roughness: 0.9, emissive: 0xff8aa8, emissiveIntensity: 0.25 });
+        const dark = new THREE.MeshStandardMaterial({ color: 0x1c2a44, roughness: 0.4 }), glint = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const sph = new THREE.SphereGeometry(1, 18, 14), root = new THREE.Group(), body = new THREE.Group(); root.add(body);
+        const puffs = [], tail = [], eyes = [];
+        const add = (mat, sx, sy, sz, x, y, z, live = true, parent = body) => {
+            const m = new THREE.Mesh(sph, mat); m.scale.set(sx, sy, sz); m.position.set(x, y, z); parent.add(m);
+            if (live) puffs.push({ m, sx, sy, sz, ph: Math.random() * 6.28, sp: 1.1 + Math.random() * 0.9 });
+            return m;
+        };
+        add(white, 4.2, 1.9, 7.0, 0, 0, 0, false);                                   // the main body
+        for (let i = 0; i < 18; i++) {                                                 // a fluffy rim round the edge (kept low, away from the seat)
+            const a = i / 18 * Math.PI * 2, x = Math.sin(a) * 4.0, z = Math.cos(a) * 6.4;
+            if (z < -4.2 && Math.abs(x) < 2.9) continue;                               // (leave the face uncovered)
+            if (z > 2.2 && Math.abs(x) < 2.6) continue;                                // (and keep the back clear so the riders can be seen)
+            const sz = 1.5 + ((i * 7) % 4) * 0.25;
+            add(i % 3 ? white : tint, sz, sz * 0.8, sz, x, 0.1 + ((i * 5) % 3) * 0.25, z);
+        }
+        for (let i = 0; i < 8; i++) add(shade, 2.3, 1.2, 2.3, ((i % 3) - 1) * 2.3, -1.4, (i - 3.5) * 1.9);   // lumpy belly
+        [[-3.6, 0.5, -3.2, 1.4], [3.6, 0.5, -3.2, 1.4], [-3.8, 0.35, 4.8, 1.5], [3.8, 0.35, 4.8, 1.5]].forEach(([x, y, z, s2]) => add(tint, s2, s2 * 0.85, s2, x, y, z));
+        // the face
+        [-1, 1].forEach(sd => {
+            const e = add(dark, 0.42, 0.62, 0.3, sd * 1.2, 0.55, -6.55, false); e.userData.sy = 0.62; eyes.push(e);
+            add(glint, 0.13, 0.17, 0.1, sd * 1.12, 0.82, -6.82, false);
+            add(pink, 0.75, 0.42, 0.25, sd * 2.4, -0.3, -6.1, false);
+        });
+        const smile = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.12, 8, 18, Math.PI), dark); smile.rotation.z = Math.PI; smile.position.set(0, -0.05, -6.75); body.add(smile);
+        // a wispy tail trailing behind
+        for (let i = 0; i < 6; i++) { const m = add(wisp, 1.7 - i * 0.22, 0.9 - i * 0.1, 1.7 - i * 0.22, 0, -0.5 - i * 0.1, 8.4 + i * 2.4, false); tail.push({ m, y0: m.position.y }); }
+        root.scale.setScalar(1.5);
+        root.userData.puffs = puffs; root.userData.tail = tail; root.userData.eyes = eyes;
+        root.traverse(o => { if (o.isMesh) o.castShadow = false; });
+        this.scene.add(root);
+        return root;
+    }
+
+    // Puffs breathe, the tail swishes, and now and then it blinks. energy: 0 = calm .. 1.5 = flying.
+    animateSkyCloud(c, t, energy = 1) {
+        const U = c.userData; if (!U.puffs) return;
+        U.puffs.forEach(p => { const k = 1 + Math.sin(t * p.sp + p.ph) * 0.05 * (0.5 + energy * 0.5); p.m.scale.set(p.sx * k, p.sy * (2 - k), p.sz * k); });
+        U.tail.forEach((p, i) => { p.m.position.x = Math.sin(t * 2.2 - i * 0.7) * (0.4 + i * 0.3) * (0.4 + energy * 0.6); p.m.position.y = p.y0 + Math.sin(t * 1.6 - i) * 0.22; });
+        const blink = (t % 4.2) > 4.06 ? 0.12 : 1;
+        U.eyes.forEach(e => { e.scale.y = e.userData.sy * blink; });
+    }
+
+    // Park the cloud on the landing pad.
+    perchSkyCloud() {
+        const b = this.skyCloud || (this.skyCloud = this.buildSkyCloud());
+        b.visible = true; b.rotation.set(0, 0, 0);
+        b.position.set(SKY.x - 11, 3.4, SKY.z + 95);
+        this.animateSkyCloud(b, 0, 0.4);
+    }
+
+    // Cutscene step 1 (the Gravity Core is already left): the cloud scoops the party up and hovers high above the earth.
+    beginSkyRide() {
+        this.skyReached = true;
+        const b = this.skyCloud || (this.skyCloud = this.buildSkyCloud());
+        b.visible = true;
+        this.skyRide = { phase: 'hover', t: 0, clock: 0, T: 17, done: false, prev: null };
+        this.applyLook(0, 0, 0, 1);
+        Sound.setMood('sky');
+        if (this.controls && this.controls.isLocked) this.controls.unlock();
+        this.camera.rotation.order = 'YXZ';
+        this.updateSkyRide(0);
+        this.camera.position.copy(this.skyCamTarget || this.camera.position);
+    }
+
+    startSkyFlight() { if (this.skyRide) { this.skyRide.phase = 'flight'; this.skyRide.t = 0; Sound.play('boat'); } }
+
+    updateSkyRide(delta) {
+        const R = this.skyRide, b = this.skyCloud;
+        if (!R || !b) return;
+        const C = SKY, ease = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+        R.clock += delta;
+        const start = new THREE.Vector3(C.x - 90, 130, C.z + 640), end = new THREE.Vector3(C.x - 11, 3.4, C.z + 95);
+        let pos, yaw = 0, pitch = 0, bank = 0;
+        if (R.phase === 'hover') {
+            pos = start.clone(); pos.y += Math.sin(R.clock * 1.2) * 1.2;
+            yaw = Math.sin(R.clock * 0.3) * 0.15; bank = Math.sin(R.clock * 0.7) * 0.05;
+        } else {
+            R.t += delta;
+            const u = Math.min(1, R.t / R.T), e = ease(u);
+            pos = new THREE.Vector3().lerpVectors(start, end, e);
+            pos.y = end.y + (start.y - end.y) * (1 - ease(Math.min(1, u * 1.04))) + Math.sin(R.t * 1.4) * 1.5 * (1 - u);
+            pos.x += Math.sin(R.t * 0.8) * 12 * (1 - u) * (1 - u);
+            if (R.prev) {
+                const d = pos.clone().sub(R.prev);
+                if (d.lengthSq() > 1e-8) { yaw = Math.atan2(-d.x, -d.z); pitch = Math.atan2(d.y, Math.hypot(d.x, d.z)) * 1.6; }
+            }
+            R.yawS = R.yawS === undefined ? yaw : R.yawS + (yaw - R.yawS) * Math.min(1, delta * 3); yaw = R.yawS;
+            R.pitchS = R.pitchS === undefined ? pitch : R.pitchS + (pitch - R.pitchS) * Math.min(1, delta * 3); pitch = R.pitchS;
+            bank = Math.cos(R.t * 0.8) * 0.18 * (1 - u);
+            if (u >= 1 && !R.done) { R.done = true; window.gameSystem.onSkyRideEnd(); }
+        }
+        R.prev = pos.clone();
+        b.position.copy(pos); b.rotation.order = 'YXZ'; b.rotation.set(pitch, yaw, bank);
+        this.animateSkyCloud(b, R.clock, R.phase === 'hover' ? 0.6 : 1.5 * (1 - ease((R.t / R.T - 0.9) * 10)));
+        b.updateMatrixWorld(true);
+        // the passengers ride on its back
+        if (this.playerObj) { this.playerObj.position.copy(b.localToWorld(new THREE.Vector3(0, 1.95, -0.5))); this.playerObj.rotation.set(0, yaw + Math.PI, 0); }
+        if (this.companionObj) { this.companionObj.position.copy(b.localToWorld(new THREE.Vector3(0, 1.95, 2.6))); this.companionObj.rotation.set(0, yaw + Math.PI, 0); }
+        // camera: a slowly swinging view from behind and above (or off to the side while it hovers)
+        const off = R.phase === 'hover' ? new THREE.Vector3(16, 5, -24) : new THREE.Vector3(8 + Math.sin(R.clock * 0.5) * 6, 15, 21);
+        const ox = off.x * Math.cos(yaw) + off.z * Math.sin(yaw), oz = -off.x * Math.sin(yaw) + off.z * Math.cos(yaw);
+        const target = new THREE.Vector3(pos.x + ox, pos.y + off.y, pos.z + oz);
+        this.skyCamTarget = target;
+        if (R.phase === 'hover' && R.clock === delta) this.camera.position.copy(target); else this.camera.position.lerp(target, 1 - Math.exp(-delta * 4));
+        this.camera.lookAt(pos.x - Math.sin(yaw) * 5, pos.y + 1.5, pos.z - Math.cos(yaw) * 5);
+    }
+
+    // Cutscene last step: the cloud has landed. Step onto the landing pad of the cloud city.
+    finishSkyRide() {
+        this.skyRide = null;
+        this.skyReached = true; this.desertReached = true;
+        this.perchSkyCloud();
+        const p = this.playerObj, C = SKY;
+        p.position.set(C.x + 3.5, 0.7, C.z + 92); p.rotation.set(0, Math.PI, 0);
+        if (this.companionObj) { this.companionObj.position.set(C.x + 7, 0.7, C.z + 94); this.companionObj.rotation.set(0, Math.PI, 0); this.compBaseY = undefined; }
+        this.velocityY = 0; this.isJumping = false; this.isGliding = false; this.grounded = true;
+        this.camera.rotation.order = 'YXZ'; this.camera.rotation.set(-0.2, 0, 0);
+        this.cameraYaw = 0; this.cameraPitch = -0.2;
+        this.camera.position.set(C.x + 2, 10, C.z + 108);
+        this.applyLook(0, 0, 0, 1);
+        Sound.setMood('sky');
+        this.updateCulling();
+    }
+
+    // =====================================================================================
     //  THE BOAT VOYAGE  (cutscene: board a boat, sail, and get slammed by a hand-shaped wave)
     // =====================================================================================
 
@@ -2830,6 +3277,7 @@ class Overworld3D {
     bindEvents() {
         document.addEventListener('keydown', e => {
             this.keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'e' && !e.repeat) this.tryTalk();   // talk to the villager next to you
         });
         document.addEventListener('keyup', e => this.keys[e.key.toLowerCase()] = false);
         window.addEventListener('resize', () => {
@@ -2989,9 +3437,16 @@ class Overworld3D {
 
         // Keep the player inside the world (the ground ends at x = ±165; the ocean ends past the arena).
         { const p = this.playerObj.position;
+          if (this.skyReached) {   // the Sky Kingdom is made of clouds: you can only walk on them (not out into the open sky)
+              if (!this.skyWalkable(p.x, p.z)) {
+                  if (this.skyWalkable(oldPos.x, p.z)) p.x = oldPos.x;            // slide along the edge
+                  else if (this.skyWalkable(p.x, oldPos.z)) p.z = oldPos.z;
+                  else { p.x = oldPos.x; p.z = oldPos.z; }
+              }
+          } else {
           p.x = THREE.MathUtils.clamp(p.x, -160, 160);
           // (once you're in the reef the way back north is closed off: the wave carried you here)
-          p.z = THREE.MathUtils.clamp(p.z, this.desertReached ? DESERT_END_Z - 12 : WORLD.arenaZ - 90, this.desertReached ? DESERT_START_Z + 25 : this.reefReached ? REEF_START_Z + 25 : 105); }
+          p.z = THREE.MathUtils.clamp(p.z, this.desertReached ? DESERT_END_Z - 12 : WORLD.arenaZ - 90, this.desertReached ? DESERT_START_Z + 25 : this.reefReached ? REEF_START_Z + 25 : 105); } }
 
         if (this.quicksand && this.desertReached) this.updateQuicksand(delta);
         this.animatePlayer(delta, oldPos, forward);
@@ -3034,36 +3489,37 @@ class Overworld3D {
         const t = THREE.MathUtils.clamp((pz - WORLD.oceanBlendStartZ) / (WORLD.oceanFogThresholdZ - WORLD.oceanBlendStartZ), 0, 1);
         const reefIn = THREE.MathUtils.clamp((REEF_START_Z + 30 - pz) / 60, 0, 1);
         const reefOut = THREE.MathUtils.clamp((pz - (REEF_END_Z - 38)) / 40, 0, 1); // the plaza at the far end is dark again
-        if (this.desertReached) this.applyLook(0, 0, 1);       // the desert is a bright, hazy, golden day
+        if (this.skyReached) this.applyLook(0, 0, 0, 1);       // the Sky Kingdom is a bright, airy blue day
+        else if (this.desertReached) this.applyLook(0, 0, 1);       // the desert is a bright, hazy, golden day
         else this.applyLook(t, Math.min(reefIn, reefOut));
 
         this.checkCollisions();
     }
 
     // Set the fog, sky and lights. t = how "underwater" (0 sunny coast .. 1 deep sea), r = how much of the sunlit reef look.
-    applyLook(t, r = 0, d = 0) {
+    applyLook(t, r = 0, d = 0, s = 0) {
         this.oceanFactor = t;
         if (this.scene.fog && this.coastFogColor) {
-            this.scene.fog.color.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
-            this.scene.fog.near = 100 - t * 88 + r * 42 + d * 30;   // clear nearby, hazy far away; underwater: thick murky water
-            this.scene.fog.far = 320 - t * 205 + r * 135 + d * 110;
-            this.scene.background.copy(this.coastBgColor).lerp(this.oceanBgColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
+            this.scene.fog.color.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
+            this.scene.fog.near = 100 - t * 88 + r * 42 + d * 30 + s * 40;   // clear nearby, hazy far away; underwater: thick murky water
+            this.scene.fog.far = 320 - t * 205 + r * 135 + d * 110 + s * 110;
+            this.scene.background.copy(this.coastBgColor).lerp(this.oceanBgColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
         }
         // Sky + lighting follow the same blend: bright sunny coast -> dim, blue-green deep ocean (or the bright reef).
         if (this.skyUniforms) {
-            this.skyUniforms.topColor.value.copy(this.coastSkyTop).lerp(this.oceanSkyTop, t).lerp(this.reefSkyTop, r).lerp(this.desertSkyTop, d);
-            this.skyUniforms.horizonColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
-            this.skyUniforms.groundColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d);
+            this.skyUniforms.topColor.value.copy(this.coastSkyTop).lerp(this.oceanSkyTop, t).lerp(this.reefSkyTop, r).lerp(this.desertSkyTop, d).lerp(this.skySkyTop, s);
+            this.skyUniforms.horizonColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
+            this.skyUniforms.groundColor.value.copy(this.coastFogColor).lerp(this.oceanFogColor, t).lerp(this.reefFogColor, r).lerp(this.desertFogColor, d).lerp(this.skyFogColor, s);
             this.skyUniforms.sunGlow.value = 1 - t;
         }
         if (this.hemiLight) {
-            this.hemiLight.intensity = 0.62 - t * 0.28 + r * 0.3 + d * 0.12;
-            this.hemiLight.color.copy(this.hemiSkyCoast).lerp(this.hemiSkyOcean, t).lerp(this.hemiSkyReef, r).lerp(this.hemiSkyDesert, d);
-            this.hemiLight.groundColor.copy(this.hemiGroundCoast).lerp(this.hemiGroundOcean, t).lerp(this.hemiGroundReef, r).lerp(this.hemiGroundDesert, d);
+            this.hemiLight.intensity = 0.62 - t * 0.28 + r * 0.3 + d * 0.12 + s * 0.22;
+            this.hemiLight.color.copy(this.hemiSkyCoast).lerp(this.hemiSkyOcean, t).lerp(this.hemiSkyReef, r).lerp(this.hemiSkyDesert, d).lerp(this.hemiSkyAir, s);
+            this.hemiLight.groundColor.copy(this.hemiGroundCoast).lerp(this.hemiGroundOcean, t).lerp(this.hemiGroundReef, r).lerp(this.hemiGroundDesert, d).lerp(this.hemiGroundAir, s);
         }
         if (this.sunLight) {
-            this.sunLight.intensity = 1.3 - t * 0.85 + r * 0.55 + d * 0.25;
-            this.sunLight.color.copy(this.sunCoast).lerp(this.sunOcean, t).lerp(this.sunReef, r).lerp(this.sunDesert, d);
+            this.sunLight.intensity = 1.3 - t * 0.85 + r * 0.55 + d * 0.25 + s * 0.05;
+            this.sunLight.color.copy(this.sunCoast).lerp(this.sunOcean, t).lerp(this.sunReef, r).lerp(this.sunDesert, d).lerp(this.sunAir, s);
         }
     }
 
@@ -3232,6 +3688,7 @@ class Overworld3D {
             } else { // villagers: turn to watch you when you're near, and wave hello
                 if (dist < 20) { Animations.faceToward(m, px, pz, delta, 3.5); ctx.lookYaw = Animations.lookYawTo(m, px, pz); }
                 ctx.calm = e.storyId === 'barnico';
+                ctx.talk = e.type === 'villager' && this.talkingTo === e && window.gameSystem.state === 'dialogue';
                 ctx.greet = dist < 13 && (e.storyId === 'barnico' || e.storyId === 'octa_join');
             }
             Animations.update(m, delta, ctx);
@@ -3327,6 +3784,14 @@ class Overworld3D {
             return;
         }
 
+        if (this.kite) {   // Iolana's kite ring race: you're flying, so the walking code sits this one out
+            KiteRace.update(delta);
+            this.updateAmbientLife(delta);
+            this.updateAtmosphere(delta, this.oceanFactor || 0);
+            this.renderer.render(this.scene, this.camera);
+            return;
+        }
+
         if (window.gameSystem.isCutscene) {
             if (this.cutsceneProgress !== undefined) {
                 this.cutsceneProgress += 0.005;
@@ -3345,10 +3810,11 @@ class Overworld3D {
                 }
             }
             if (this.voyage) this.updateVoyage(delta);
+            if (this.skyRide) this.updateSkyRide(delta);
             this.updateAmbientLife(delta);
             this.updateAtmosphere(delta, this.oceanFactor || 0);
             this.renderer.render(this.scene, this.camera);
-        } else if (window.gameSystem.state === 'dialogue' || window.gameSystem.state === 'shop' || window.gameSystem.state === 'gameover') {
+        } else if (window.gameSystem.state === 'dialogue' || window.gameSystem.state === 'shop' || window.gameSystem.state === 'gameover' || window.gameSystem.state === 'choice') {
             // While someone is talking (or you've fallen) the world doesn't freeze: everyone keeps breathing,
             // and hit / death animations finish playing.
             this.updateAmbientLife(delta);

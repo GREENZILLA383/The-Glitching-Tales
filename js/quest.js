@@ -45,6 +45,22 @@ const Quest = (() => {
         const at = (e, text) => ({ text, x: e.mesh.position.x, z: e.mesh.position.z });
 
         if (gs.state === 'gauntlet' || ow.oblongtaloMesh) return { text: "Survive Oblongtalo's charges!" };
+        if (ow.skyReached) {
+            if (Math.hypot(pos.x - MAKANI.x, pos.z - MAKANI.z) < 120) {
+                const met = ow.metVillagers ? ow.metVillagers.size : 0;
+                if (met < VILLAGERS.length) {   // lead the way to the nearest villager you haven't met yet
+                    let best = null, bd = 1e12;
+                    ow.entities.forEach(e => { if (e.type === 'villager' && !ow.metVillagers.has(e.v.id)) { const d = Math.hypot(e.mesh.position.x - pos.x, e.mesh.position.z - pos.z); if (d < bd) { bd = d; best = e; } } });
+                    if (best) return { text: 'Say hello to the villagers of Makani (' + met + '/' + VILLAGERS.length + ')', x: best.mesh.position.x, z: best.mesh.position.z };
+                }
+                if (ow.kiteBest == null) {   // all met: point at Iolana and her kite race
+                    const io = ow.entities.find(e => e.type === 'villager' && e.v.id === 'iolana');
+                    if (io) return { text: 'Talk to Iolana again to try her kite race', x: io.mesh.position.x, z: io.mesh.position.z };
+                }
+                return { text: 'Explore Makani Village', x: MAKANI.x, z: MAKANI.z };
+            }
+            return { text: 'Follow the cloud road north to Makani Village', x: MAKANI.x, z: MAKANI.z + 30 };
+        }
         if (ow.desertReached) {
             if (ow._fallingToCore) return { text: '...' };
             if (Math.hypot(pos.x - VILLAGE.x, pos.z - VILLAGE.z) < 130) return { text: 'Find the quicksand that leads to the Gravity Core', x: QUICKSAND.x, z: QUICKSAND.z };
