@@ -163,13 +163,16 @@ class GameSystem3D {
     onCrotonDefeated() {
         this.isCutscene = true;
         document.body.classList.add('cutscene-active');
-        this.dialogueQueue = [
+        // (a "Level up!" box may still be open from the winning blow: closing it must not end the cutscene or eat these lines)
+        this.cutsceneHold = true;
+        const lines = [
             { speaker: 'Croton', text: "Worthy. Huh. It's been a while." },
             { speaker: 'Croton', text: "Whatever's waiting for you next is out there. Ruined Ocean's not kind to visitors. Try not to drown." }
         ];
         overworld3d.startCinematicFlyin(() => {
-            const nextMsg = this.dialogueQueue.shift();
-            this.showDialogue(nextMsg.speaker, nextMsg.text);
+            this.cutsceneHold = false;
+            if (this.state === 'dialogue') this.dialogueQueue.push(...lines);          // wait for the open box to be closed
+            else { this.dialogueQueue = lines.slice(1); this.showDialogue(lines[0].speaker, lines[0].text); }
         });
     }
 
@@ -258,6 +261,7 @@ class GameSystem3D {
     }
 
     endCutscene() {
+        if (this.cutsceneHold) return;     // (a scene is still on its way - e.g. a camera fly-in)
         // A cutscene can run several scenes in a row: if one is queued, run it and stay in the cutscene.
         if (this.afterDialogue) {
             const next = this.afterDialogue;
@@ -374,6 +378,7 @@ class GameSystem3D {
         if (v.id === 'iolana' && !first) { this.offerKiteRace(ent); return; }   // after the first hello, she offers her kite race
         const lines = first ? v.intro.slice() : [v.chat[(ent.chatIdx = ((ent.chatIdx === undefined ? -1 : ent.chatIdx) + 1)) % v.chat.length]];
         const who = v.name + ', ' + v.title;
+        if (v.shop) this.afterTalk = () => window.shopSystem.openShop(v.shop);      // (the trader: the shop opens when the chat is over)
         this.dialogueQueue = lines.slice(1).map(text => ({ speaker: who, text }));
         this.showDialogue(who, lines[0]);
         if (first && window.SaveGame) setTimeout(() => SaveGame.autosave(), 500);
@@ -432,7 +437,10 @@ class ShopSystem {
 
         this.closeBtn.addEventListener('click', () => this.closeShop());
 
-        this.inventory = [
+        this.shops = { octo: {}, cashato: {} };
+        this.shops.octo = {
+            title: 'SHOP', greeting: '"Wandering the coasts, buying and selling. Have a look around!"',
+            items: [
             { id: 'spell_time', name: 'Time Spell', desc: 'A Magick bolt that slows on hit (twice as long if you are Magick).', price: 60, category: 'Spell',
               weaponData: { name: 'Time Spell', playStyle: 'magick', power: 8, skillType: 'magick', durability: null, maxDurability: null, mpCost: 10 } },
             { id: 'spell_spark', name: 'Greater Spark', desc: 'A stronger Magick bolt.', price: 120, category: 'Spell',
@@ -444,12 +452,28 @@ class ShopSystem {
             { id: 'charm_vigor', name: 'Vigor Charm', desc: '+15 Max HP.', price: 70, category: 'Charm', stat: 'maxHp', val: 15 },
             { id: 'charm_focus', name: 'Focus Charm', desc: '+15 Max MP.', price: 70, category: 'Charm', stat: 'maxMp', val: 15 },
             { id: 'charm_wind', name: 'Wind Charm', desc: '+15 Max Stamina.', price: 70, category: 'Charm', stat: 'maxStamina', val: 15 }
-        ];
+            ]
+        };
+        // Cashato's Cloud Market (Makani Village). Edit the items here: price = coins, weaponData = the stats you get.
+        this.shops.cashato = {
+            title: "CASHATO'S CLOUD MARKET", greeting: '"Welcome, welcome! Everything here is spun from real cloud. Coins on the counter, please!"',
+            items: [
+            { id: 'weapon_cloud_spear', name: 'Cloud Spear', desc: 'A long spear spun from cloud. Light, quick and sharp. Wears out with use.', price: 150, category: 'Weapon',
+              weaponData: { name: 'Cloud Spear', playStyle: 'melee', power: 32, skillType: 'melee', durability: 60, maxDurability: 60 } },
+            { id: 'weapon_cloud_arrow', name: 'Cloud Arrow', desc: 'Arrows of hardened cloud that glide straight to their target. Wears out with use.', price: 150, category: 'Weapon',
+              weaponData: { name: 'Cloud Arrow', playStyle: 'range', power: 30, skillType: 'range', durability: 60, maxDurability: 60, projColor: 0xcfe9ff } },
+            { id: 'pass_cloud_stair', name: 'Cloud Stair Pass', desc: 'Cashato is hiding something under the counter... but it is not for sale yet.', price: 0, category: 'Pass', locked: true }
+            ]
+        };
+        this.inventory = this.shops.octo.items;     // (the list of what the open shop sells)
     }
 
-    openShop() {
-        this.shopkeeperDialogue.innerText = '"Wandering the coasts, buying and selling. Have a look around!"';
-        this.shopTitle.innerText = 'SHOP';
+    // id: 'octo' (the coast shopkeeper) or 'cashato' (the Cloud Market)
+    openShop(id = 'octo') {
+        const shop = this.shops[id] || this.shops.octo;
+        this.inventory = shop.items;
+        this.shopkeeperDialogue.innerText = shop.greeting;
+        this.shopTitle.innerText = shop.title;
         this.updateCoinDisplay();
         this.renderItems();
         this.shopUI.classList.remove('hidden');
@@ -475,13 +499,13 @@ class ShopSystem {
             const el = document.createElement('div');
             el.className = 'shop-item';
             const finalPrice = Math.max(1, Math.floor(item.price));
-            const canAfford = (this.game.coins || 0) >= finalPrice;
+            const canAfford = !item.locked && (this.game.coins || 0) >= finalPrice;
             const matched = item.weaponData && item.weaponData.skillType === player.skillType;
             el.innerHTML = `
                 <div class="item-name">${item.name} ${matched ? '⭐' : ''}</div>
                 <div class="item-desc">[${item.category}] ${item.desc}</div>
-                <div class="item-price">💰 ${finalPrice}</div>
-                <button class="buy-btn" ${canAfford ? '' : 'disabled'}>Buy</button>
+                <div class="item-price">${item.locked ? '💰 ???' : '💰 ' + finalPrice}</div>
+                <button class="buy-btn" ${canAfford ? '' : 'disabled'}>${item.locked ? 'Not yet' : 'Buy'}</button>
             `;
             el.querySelector('.buy-btn').addEventListener('click', () => this.buyItem(item));
             this.shopItemsGrid.appendChild(el);
@@ -489,6 +513,7 @@ class ShopSystem {
     }
 
     buyItem(item) {
+        if (item.locked) return;
         const finalPrice = Math.max(1, Math.floor(item.price));
         if ((this.game.coins || 0) < finalPrice) return;
         this.game.coins -= finalPrice;

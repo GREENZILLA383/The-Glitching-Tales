@@ -32,7 +32,13 @@ const VILLAGERS = [
       chat: ['My scarves melt if you hold them too tightly. That is how you know they are real.', 'If you ever need a hug, find a cloud. If you need a scarf, find me.'] },
     { id: 'mahina', name: 'Mahina', title: 'the Moon Watcher', skin: '#e9c9a8', robe: '#d6dce8', trim: '#8f9ab8', accent: '#e8f0ff', hair: '#101420', hairStyle: 'long', extra: 'moon', pattern: 'moon',
       intro: ['...Oh. A visitor. I am Mahina. I sleep by day and watch the moon by night.', 'Forgive me if I yawn. The moon keeps very late hours.'],
-      chat: ['I have felt something odd lately, like the whole sky is holding its breath.', 'The moon never talks back, but she is an excellent listener.'] }
+      chat: ['I have felt something odd lately, like the whole sky is holding its breath.', 'The moon never talks back, but she is an excellent listener.'] },
+    // The trader. He is NOT one of the eight who live in the round houses: he runs the Cloud Market (its own building) and talking to him opens the shop.
+    { id: 'cashato', name: 'Cashato', title: 'the Cloud Trader', shop: 'cashato', skin: '#b9784c', robe: '#ffd76a', trim: '#ff8a3d', accent: '#2fb5a8', hair: '#3a2616', hairStyle: 'bob', extra: 'merchant', pattern: 'coins',
+      intro: ['Ho ho! Cashato is the name and trading is the game! I swap coins for the finest gear in the sky.',
+              'Cloud Spears, Cloud Arrows... everything here is spun from real cloud. Light as air, sharp as a thunderclap!',
+              'And one day I will have something very special for sale: a Cloud Stair Pass. But that is a story for another day. Now, what can I get you?'],
+      chat: ['Welcome back, my friend! A coin saved is a cloud earned.', 'Everything in my shop is made by hand. Well... by wind, mostly.', 'About that Cloud Stair Pass... patience, patience. Good things take time to float down!'] }
 ];
 
 // Parts for one villager (feet on y = 0, about 5 tall). `head` and `scarf` hang from pivots so they can move.
@@ -55,6 +61,7 @@ function buildVillagerParts(v) {
     if (v.pattern === 'swirl') [[0.8, 0.0], [1.15, 0.35], [0.6, -0.3]].forEach(([y, x]) => add({ shape: 'torus', size: [0.7, 0.7, 0.1], pos: [x * 0.8, y + 0.2, 0.84], color: '#ffffff' }));
     if (v.pattern === 'dots') [[-0.5, 1.3], [0.55, 1.0], [0, 0.7], [-0.4, 0.5], [0.45, 1.6]].forEach(([x, y]) => add({ shape: 'sphere', size: [0.3, 0.3, 0.1], pos: [x, y, 0.82 - Math.abs(x) * 0.15], color: '#ffffff' }));
     if (v.pattern === 'moon') add({ shape: 'torus', size: [0.9, 0.9, 0.16], pos: [0, 1.4, 0.85], color: '#ffffff', emissive: '#bcd0ff' });
+    if (v.pattern === 'coins') [[-0.5, 1.35], [0.5, 1.05], [0, 0.7], [-0.45, 0.5], [0.45, 1.65]].forEach(([x, y]) => add({ shape: 'cylinder', size: [0.42, 0.1, 0.42], pos: [x, y, 0.84 - Math.abs(x) * 0.15], rot: [Math.PI / 2, 0, 0], color: '#ffd24a', emissive: '#ffae00' }));
     // a collar of little clouds round the neck
     for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; add({ shape: 'sphere', size: [0.5, 0.42, 0.5], pos: [Math.sin(a) * 0.72, 3.5, Math.cos(a) * 0.62], color: '#ffffff' }); }
     add({ shape: 'cylinder', size: [0.55, 0.35, 0.55], pos: [0, 3.62, 0], color: skin });
@@ -90,6 +97,14 @@ function buildVillagerParts(v) {
     if (v.extra === 'feather') { X({ shape: 'capsule', size: [0.22, 1.7, 0.14], pos: [0.95, 5.55, -0.05], rot: [0, 0, -0.45], color: '#ffffff' }); X({ shape: 'capsule', size: [0.12, 1.2, 0.1], pos: [1.1, 5.5, -0.05], rot: [0, 0, -0.45], color: v.accent }); }
     if (v.extra === 'mistscarf') { add({ shape: 'sphere', size: [1.5, 0.45, 1.3], pos: [0, 3.3, 0], color: '#ffffff', opacity: 0.8 }); }
     if (v.extra === 'moon') { add({ shape: 'torus', size: [0.55, 0.55, 0.12], pos: [0, 3.0, 0.8], color: '#e8f0ff', emissive: '#aab8ff' }); }
+    if (v.extra === 'merchant') {   // a round trader's hat with a gold coin on the front, and a fat coin pouch at the hip
+        X({ shape: 'cylinder', size: [1.95, 0.2, 1.9], pos: [0, 5.3, 0], color: v.accent });
+        X({ shape: 'sphere', size: [1.4, 1.0, 1.35], pos: [0, 5.85, 0], color: v.accent });
+        X({ shape: 'cylinder', size: [0.6, 0.1, 0.6], pos: [0, 5.75, 1.16], rot: [Math.PI / 2, 0, 0], color: '#ffd24a', emissive: '#ffae00' });
+        X({ shape: 'sphere', size: [0.3, 0.3, 0.3], pos: [0, 6.45, 0], color: '#ffd24a', emissive: '#ffae00' });
+        add({ shape: 'sphere', size: [0.7, 0.8, 0.6], pos: [1.0, 1.5, 0.35], color: '#7a4a2a' });
+        add({ shape: 'sphere', size: [0.3, 0.25, 0.3], pos: [1.0, 2.0, 0.35], color: '#ffd24a', emissive: '#ffae00' });
+    }
     return P;
 }
 

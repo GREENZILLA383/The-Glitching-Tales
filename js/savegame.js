@@ -21,6 +21,7 @@ const SaveGame = (() => {
     function canSave() {
         const gs = window.gameSystem, ow = typeof overworld3d !== 'undefined' ? overworld3d : null;
         if (!gs || !ow || !ow.playerObj || !gs.party.length) return false;
+        if (window.AutoPlay && (AutoPlay.active || AutoPlay.S.done)) return false;   // Test Mode never touches your real saved game
         if (gs.isCutscene || gs.state === 'gauntlet' || gs.state === 'gameover' || gs.state === 'menu') return false;
         // Not while the boat voyage runs or during Oblongtalo's challenge; the long Coral Reef is fine to save in.
         if (ow.voyage || ow.skyRide || ow.kite || gs.state === 'choice' || ow.oblongtaloMesh || (window.GravityCore && GravityCore.active)) return false;

@@ -365,7 +365,7 @@ const GravityCore = (() => {
         if (style === 'melee') {
             if (arc(P.dir, B.dir) < 10.5) hurtBoss(power);
         } else {
-            const g = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshBasicMaterial({ color: weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066 }));
+            const g = new THREE.Mesh(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshBasicMaterial({ color: weapon.projColor || (weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066) }));
             overworld3d.scene.add(g);
             orbs.push({ m: g, dir: P.dir.clone(), life: 2.4, power });
         }

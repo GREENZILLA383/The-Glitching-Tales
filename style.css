@@ -1324,3 +1324,30 @@ body.kite-on #mc-attack, body.kite-on #mc-jump, body.kite-on #mc-talk, body.kite
 html.is-mobile #choice-box { bottom: 10px; padding: 10px 16px; }
 html.is-mobile #choice-text { font-size: 1rem; margin-bottom: 8px; }
 body.kite-on #compass, body.kite-on #objective { display: none !important; }
+
+/* --- Test Bot (auto-play) --- */
+#bot-panel { position: fixed; left: 14px; top: 104px; width: 300px; z-index: 9000; padding: 10px 12px; border-radius: 12px; background: rgba(8,14,32,0.86); border: 2px solid #57d6ff; color: #e8f6ff; font: 600 13px 'Outfit', sans-serif; box-shadow: 0 6px 22px rgba(0,0,0,0.5); backdrop-filter: blur(6px); }
+#bot-panel .bp-head { display: flex; justify-content: space-between; font-weight: 900; letter-spacing: 1px; color: #57d6ff; margin-bottom: 4px; }
+#bot-panel .bp-chap { font-size: 11px; opacity: 0.75; margin-bottom: 3px; }
+#bot-panel .bp-step { font-size: 14px; font-weight: 800; color: #fff; min-height: 2.4em; line-height: 1.2; }
+#bot-panel .bp-bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.15); margin: 6px 0; overflow: hidden; }
+#bot-panel .bp-fill { height: 100%; width: 0; background: linear-gradient(90deg, #57d6ff, #7dff9c); transition: width 0.5s; }
+#bot-panel .bp-prog { font-size: 11px; opacity: 0.85; margin-bottom: 6px; }
+#bot-panel .bp-btns { display: flex; gap: 6px; }
+#bot-panel .bp-btns button { flex: 1; padding: 5px 4px; border-radius: 7px; border: 1px solid rgba(87,214,255,0.7); background: rgba(87,214,255,0.12); color: #e8f6ff; font: 700 12px 'Outfit', sans-serif; cursor: pointer; }
+#bot-panel .bp-btns button:hover { background: rgba(87,214,255,0.35); }
+#bot-panel .bp-list { display: none; margin-top: 8px; max-height: 190px; overflow: auto; font-size: 11px; line-height: 1.45; }
+#bot-panel.open .bp-list { display: block; }
+#bot-panel .bp-assist { color: #ffd166; } #bot-panel .bp-warn { color: #ff9f7a; } #bot-panel .bp-error { color: #ff6b6b; }
+html.is-mobile #bot-panel { width: 220px; left: 6px; top: 70px; font-size: 11px; padding: 6px 8px; }
+body.bot-on #mobile-controls { display: none !important; }
+#bot-setup, #bot-report { position: fixed; inset: 0; z-index: 9500; background: rgba(5,8,20,0.78); display: flex; align-items: center; justify-content: center; font-family: 'Outfit', sans-serif; color: #fff; padding: 16px; }
+#bot-setup .bs-card, #bot-report .br-card { width: min(560px, 100%); max-height: 92vh; overflow: auto; padding: 22px 24px; border-radius: 16px; background: #0d1530; border: 2px solid #57d6ff; box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
+#bot-setup h2, #bot-report h2 { margin: 0 0 8px; color: #57d6ff; }
+#bot-setup p { margin: 0 0 14px; opacity: 0.9; }
+#bot-setup label { display: block; margin: 10px 0; font-weight: 700; }
+#bot-setup select { display: block; width: 100%; margin-top: 4px; padding: 9px; border-radius: 8px; border: 1px solid #57d6ff; background: #14204a; color: #fff; font: 600 14px 'Outfit', sans-serif; }
+.bs-btns, .br-btns { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.bs-btns button, .br-btns button { flex: 1; min-width: 130px; padding: 11px; border-radius: 10px; border: 2px solid #57d6ff; background: rgba(87,214,255,0.16); color: #fff; font: 800 14px 'Outfit', sans-serif; cursor: pointer; }
+.bs-btns button:hover, .br-btns button:hover { background: rgba(87,214,255,0.4); }
+#bot-report pre { white-space: pre-wrap; font: 12px/1.5 Consolas, monospace; background: #080e22; padding: 12px; border-radius: 10px; max-height: 46vh; overflow: auto; }

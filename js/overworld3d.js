@@ -2888,6 +2888,43 @@ class Overworld3D {
         // ---- the villagers: one standing outside each house, looking toward the plaza ----
         plots.forEach((pl, i) => { const dx = V.x - pl.x, dz = V.z - pl.z, L = Math.hypot(dx, dz); this.spawnVillager(VILLAGERS[i], pl.x + dx / L * 9.5 + dz / L * 2.4, pl.z + dz / L * 9.5 - dx / L * 2.4, Math.atan2(dx, dz)); });
 
+        // ---- Cashato's Cloud Market: a round little shop on its own cloud, halfway between the plaza and the first two houses ----
+        {
+            const sa = plots[0].a + Math.PI / 8, SR = 50, sx = V.x + Math.sin(sa) * SR, sz = V.z + Math.cos(sa) * SR;
+            disc(sx, sz, 12.5, plotMat, 0.04);
+            road(V.x + Math.sin(sa) * 24, V.z + Math.cos(sa) * 24, sx, sz, 5);
+            const shop = new THREE.Group();
+            const gold = M(0xffd24a, { emissive: 0xffae00, emissiveIntensity: 0.5, roughness: 0.4 }), teal = M(0x2fb5a8, { roughness: 0.6 }), coral = M(0xff6f61), cream = M(0xfff0b8), wood = M(0x7a5a3a), sky = M(0xdff1ff, { emissive: 0x9fd0ff, emissiveIntensity: 0.5 });
+            put(mesh(new THREE.CylinderGeometry(5.0, 5.3, 4.6, 16), cream), 0, 2.3, 0, shop);                       // the round body
+            put(mesh(new THREE.CylinderGeometry(5.45, 5.45, 0.6, 16), band), 0, 4.7, 0, shop);
+            put(mesh(new THREE.ConeGeometry(6.6, 4.2, 16), teal), 0, 7.1, 0, shop);                                 // the roof
+            put(mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.36, 22), gold), 0, 10.2, 0, shop).rotation.x = Math.PI / 2;   // a giant gold coin on top
+            put(mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.6, 6), wood), 0, 9.3, 0, shop);
+            [-1, 1].forEach(sd => put(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.4, 12), M(0xfff2b0, { emissive: 0xffd86a, emissiveIntensity: 0.8 })), sd * 2.9, 3.0, 4.05, shop).rotation.x = Math.PI / 2);   // lit windows
+            for (let i = 0; i < 5; i++) {                                                                           // the striped awning over the counter
+                const a = (i - 2) * 0.3, slab = put(mesh(new THREE.BoxGeometry(3.4, 0.22, 3.6), i % 2 ? cream : coral), Math.sin(a) * 9.6, 6.0, Math.cos(a) * 9.6 + 0.3, shop);
+                slab.rotation.order = 'YXZ'; slab.rotation.set(0.32, a, 0);
+            }
+            [-0.95, 0.95].forEach(a => put(mesh(new THREE.CylinderGeometry(0.22, 0.26, 6.0, 8), wood), Math.sin(a) * 11.0, 3.0, Math.cos(a) * 11.0, shop));
+            put(mesh(new THREE.BoxGeometry(7.2, 1.1, 1.5), wood), 0, 0.55, 8.9, shop);                              // the counter...
+            put(mesh(new THREE.BoxGeometry(7.4, 0.14, 1.7), cream), 0, 1.15, 8.9, shop);
+            put(mesh(new THREE.CylinderGeometry(0.09, 0.09, 4.2, 6), wood), -1.9, 1.4, 8.9, shop).rotation.z = Math.PI / 2;      // ...a Cloud Spear on display
+            put(mesh(new THREE.ConeGeometry(0.24, 0.8, 6), sky), 0.5, 1.4, 8.9, shop).rotation.z = -Math.PI / 2;
+            put(mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 6), wood), 1.9, 1.4, 8.5, shop).rotation.z = Math.PI / 2;       // ...a Cloud Arrow
+            put(mesh(new THREE.ConeGeometry(0.16, 0.5, 6), sky), 3.4, 1.4, 8.5, shop).rotation.z = -Math.PI / 2;
+            [0.9, 1.05].forEach(x => put(mesh(new THREE.BoxGeometry(0.5, 0.05, 0.3), sky), x, 1.4, 8.5, shop));
+            for (let i = 0; i < 4; i++) put(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.13, 14), gold), 2.9, 1.3 + i * 0.14, 9.4, shop);   // a pile of gold coins
+            [[-3.0, 1.9, 9.4], [-2.4, 1.7, 9.6]].forEach(([x, y, z]) => put(mesh(new THREE.SphereGeometry(0.7, 10, 8), cream), x, y - 0.4, z, shop));   // sacks of goods
+            shop.rotation.y = Math.atan2(V.x - sx, V.z - sz);
+            shop.position.set(sx, 0, sz);
+            this.mergeGroup(shop, { flat: true, castShadow: false });
+            g.add(shop);
+            this.colliders.push(new THREE.Box3(new THREE.Vector3(sx - 4.6, 0, sz - 4.6), new THREE.Vector3(sx + 4.6, 9, sz + 4.6)));   // the round body is solid
+            const dx = V.x - sx, dz = V.z - sz, L = Math.hypot(dx, dz);
+            this.spawnVillager(VILLAGERS[8], sx + dx / L * 6.5, sz + dz / L * 6.5, Math.atan2(dx, dz));                            // Cashato stands behind the counter
+            this.buildSignpost(sx + dx / L * 14 - dz / L * 7, sz + dz / L * 14 + dx / L * 7, ["CASHATO'S", 'CLOUD MARKET']);
+        }
+
         // ---- the long cloud road from the cloud city, with lanterns and kites along it ----
         const rx0 = C.x, rz0 = C.z - 112, rx1 = V.x, rz1 = V.z + 26;
         road(rx0, rz0, rx1, rz1, 7);
@@ -3777,10 +3814,19 @@ class Overworld3D {
         const now = performance.now();
         const delta = Math.min(0.05, (now - this.lastFrameTime) / 1000);
         this.lastFrameTime = now;
+        this.frame(delta);
+    }
+
+    // Draw the scene (unless a test is fast-forwarding the game with this.noRender on).
+    draw() { if (!this.noRender) this.renderer.render(this.scene, this.camera); }
+
+    // One step of the game. (animate() calls this every frame; the Test Bot and the tests can call it directly.)
+    frame(delta) {
+        if (window.AutoPlay && AutoPlay.active) AutoPlay.tick(delta);   // the Test Bot "presses the buttons" for this frame
 
         if (window.GravityCore && GravityCore.active) {   // boss stage: its own little planet, its own rules
             GravityCore.update(delta);
-            this.renderer.render(this.scene, this.camera);
+            this.draw();
             return;
         }
 
@@ -3788,7 +3834,7 @@ class Overworld3D {
             KiteRace.update(delta);
             this.updateAmbientLife(delta);
             this.updateAtmosphere(delta, this.oceanFactor || 0);
-            this.renderer.render(this.scene, this.camera);
+            this.draw();
             return;
         }
 
@@ -3813,13 +3859,13 @@ class Overworld3D {
             if (this.skyRide) this.updateSkyRide(delta);
             this.updateAmbientLife(delta);
             this.updateAtmosphere(delta, this.oceanFactor || 0);
-            this.renderer.render(this.scene, this.camera);
+            this.draw();
         } else if (window.gameSystem.state === 'dialogue' || window.gameSystem.state === 'shop' || window.gameSystem.state === 'gameover' || window.gameSystem.state === 'choice') {
             // While someone is talking (or you've fallen) the world doesn't freeze: everyone keeps breathing,
             // and hit / death animations finish playing.
             this.updateAmbientLife(delta);
             this.updateAtmosphere(delta, this.oceanFactor || 0);
-            this.renderer.render(this.scene, this.camera);
+            this.draw();
         } else if (window.gameSystem.state === 'overworld' || window.gameSystem.state === 'gauntlet') {
             this.updatePlayer(delta);
             this.updateCompanion(delta);
@@ -3846,7 +3892,7 @@ class Overworld3D {
                 }
             });
 
-            this.renderer.render(this.scene, this.camera);
+            this.draw();
         }
     }
 

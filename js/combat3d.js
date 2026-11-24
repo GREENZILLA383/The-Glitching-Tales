@@ -103,7 +103,7 @@ class CombatSystem {
 
     spawnProjectile(origin, dir, weapon, homingTarget = null) {
         const geo = new THREE.SphereGeometry(0.4, 8, 8);
-        const color = weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066;
+        const color = weapon.projColor || (weapon.playStyle === 'magick' ? 0x8fd6ff : 0xffe066);
         const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 });
         const mesh = new THREE.Mesh(geo, mat);
         mesh.position.copy(origin);
@@ -206,6 +206,7 @@ class CombatSystem {
 
     // `kind` 'fire' also sets the player alight (a few small burn ticks after the hit).
     damagePlayer(amount, kind = null) {
+        if (window.gameSystem.godMode) return;          // the Settings "Invincible" switch (and the Test Bot's safety net)
         const player = window.gameSystem.party[0];
         const now = performance.now() / 1000;
         if (now < (player.invincibleUntil || 0)) return;

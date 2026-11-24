@@ -131,14 +131,10 @@ class CharacterCreationSystem {
         this.pv = null;
     }
 
-    confirm() {
-        const name = (this.nameInput.value || 'Traveler').trim().slice(0, 20) || 'Traveler';
-        const bodyColor = this.bodyColorInput.value || '#e8b98a';
-        const outfitColor = this.outfitColorInput.value || '#3b6ea5';
-        const skillType = this.selectedSkillType;
+    // Build a brand-new level-1 hero (used by the Create Character screen and by the Test Bot).
+    createPlayer(name, skillType, bodyColor, outfitColor) {
         const weapon = { ...STARTER_WEAPONS[skillType] };
-
-        const player = {
+        return {
             id: 'player', name, isPlayerCharacter: true,
             skillType,
             appearance: { bodyColor, outfitColor },
@@ -151,6 +147,13 @@ class CharacterCreationSystem {
             equippedWeapon: weapon,
             build3D: () => VoxelBuilder.buildCharacter(buildPlayerParts({ bodyColor, outfitColor }))
         };
+    }
+
+    confirm() {
+        const name = (this.nameInput.value || 'Traveler').trim().slice(0, 20) || 'Traveler';
+        const bodyColor = this.bodyColorInput.value || '#e8b98a';
+        const outfitColor = this.outfitColorInput.value || '#3b6ea5';
+        const player = this.createPlayer(name, this.selectedSkillType, bodyColor, outfitColor);
 
         this.ui.classList.add('hidden');
         this.stopPreview();
