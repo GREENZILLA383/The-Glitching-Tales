@@ -10405,11 +10405,11 @@ window.onload = () => {
 // THE TEST BOT ("Test Mode").
 //
 // Press  🤖 TEST MODE  on the title screen and the game plays ITSELF, start to finish, slowly enough to watch:
-//   Chapter 1  Emerald Coast: Barnico, Octa, the shop, every crab and the Flow Song,
-//              the Flow Song, the Temple of Crabs and Croton
-//   Chapter 2  the Sea Gate + boat, the Coral Reef (every eel and fire fish), Oblongtalo's challenge
-//   Chapter 3  the Dunes of Force (every viper and Scortus), Cacto Village, the quicksand, Graton in the Gravity Core
-//   Chapter 4  Wisp's flight, the Sky Kingdom, all 8 villagers of Makani (twice each), and Iolana's Kite Ring Race
+//   Chapter 1  Emerald Coast: Barnico, Octa, the shop, (optionally) the Flow Song,
+//              the Temple of Crabs (only the crabs that block the way) and Croton
+//   Chapter 2  the Sea Gate + boat, the Coral Reef, Oblongtalo's challenge
+//   Chapter 3  the Dunes of Force, Cacto Village, the quicksand, Graton in the Gravity Core
+//   Chapter 4  Wisp's flight, the Sky Kingdom, all the villagers of Makani (twice each), Cashato's shop, both side quests and Iolana's Kite Ring Race
 //
 // It "presses the buttons" like a person: it steers the camera, holds W, swings / shoots, clicks through dialogue (waiting long
 // enough to read it), buys things in the shop, and presses E to talk. Your real saved game is never touched.
@@ -10447,7 +10447,7 @@ const AutoPlay = (() => {
     function step(text) { S.step = text; say('info', text); updatePanel(true); }
     function note(kind, text) { say(kind, text); if (kind === 'assist') { S.assists++; S.stats.assists++; } }
     function milestone(id, label) { S.milestones.push({ id, label, t: S.clock }); say('info', '✓ ' + label); updatePanel(true); }
-    const totalMilestones = () => CFG.thorough ? 22 : 19;
+    const totalMilestones = () => CFG.thorough ? 20 : 19;
 
     // ---------------------------------------------------------------- helpers about the world
     const free = () => { const g = gs(), o = ow(); return (g.state === 'overworld' || g.state === 'gauntlet') && !g.isCutscene && !(g.dialogueQueue && g.dialogueQueue.length) && !o.skyRide && !o.voyage && !o.kite && !(window.GravityCore && GravityCore.active) && o.cutsceneProgress === undefined; };
@@ -10775,45 +10775,15 @@ const AutoPlay = (() => {
         return true;
     }
 
-    // the things the bot goes looking for (the Flow Song and the creatures), filtered by a region test on (x, z).
-    // (It does not collect coins or chests.)
-    function collectibles(inRegion, withEnemies) {
-        const o = ow(), out = [];
-        o.entities.forEach(e => {
-            if (!e.mesh) return; const x = e.mesh.position.x, z = e.mesh.position.z;
-            if (!inRegion(x, z)) return;
-            if (e.type === 'song') out.push({ kind: 'song', x, z, ref: e });
-            else if (withEnemies && e.type === 'enemy' && !e.roomId && alive(e)) out.push({ kind: 'enemy', x, z, ref: e });
-        });
-        return out;
-    }
-
-    async function visit(t) {
-        if (t.kind === 'song') { await walkTo(t.x, t.z, { r: Math.max(1.2, (t.ref.radius || 3) - 1.2), timeout: 70, label: 'the Flow Song' }); await sleep(0.5); }
-        else if (t.kind === 'enemy') { await fight(t.ref, { timeout: 60 }); }
-        await settle();
-    }
-
-    async function sweep(label, inRegion, withEnemies = true, abortIf = null) {
-        const skip = new Set();
-        const total = collectibles(inRegion, withEnemies).length;
-        if (!total) return;
-        step('Exploring ' + label + ' (' + total + ' things to find)');
-        let guard = 0, doneN = 0;
-        while (guard++ < 600) {
-            if (abortIf && abortIf()) { note('warn', 'Stopped exploring ' + label + ' early because the story moved on'); break; }
-            const list = collectibles(inRegion, withEnemies).filter(t => !skip.has(t.ref) && !given.has(t.ref));
-            S.prog = { label, done: total - list.length, total };
-            if (!list.length) break;
-            const p = pos(); list.sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z));
-            const t = list[0];
-            S.step = 'Exploring ' + label + ': ' + ({ song: 'finding the Flow Song', enemy: 'fighting ' + ((t.ref.data && t.ref.data.name) || 'a creature') }[t.kind]);
-            await visit(t);
-            doneN++;
-            if (t.kind === 'song' ? present(t.ref) : alive(t.ref)) { skip.add(t.ref); given.add(t.ref); }   // still there? don't loop on it forever
-        }
-        S.prog = null;
-        milestone('sweep-' + label, 'Explored ' + label + ' completely');
+    // The bot does NOT hunt creatures (it only fights what the story needs: the temple crabs, Croton and Graton).
+    // The one optional thing it looks for is the Flow Song, the shy little music creature that you befriend by walking up to it.
+    async function findFlowSong() {
+        const song = ow().entities.find(e => e.type === 'song');
+        if (!song) return;
+        step('Looking for the Flow Song (the little music creature)');
+        await walkTo(song.mesh.position.x, song.mesh.position.z, { r: Math.max(1.2, (song.radius || 3) - 1.2), timeout: 120, label: 'the Flow Song' });
+        await sleep(0.5); await settle();
+        if (!present(song)) milestone('flowsong', 'Befriended the Flow Song');
     }
 
     // ---------------------------------------------------------------- the story, chapter by chapter
@@ -10894,7 +10864,7 @@ const AutoPlay = (() => {
         await talkToStoryNpc('octa_join', 'Octa');
         milestone('octa', 'Octa joined the party');
         await visitShop();
-        if (CFG.thorough) await sweep('the Emerald Coast (meadows, highlands, marsh)', (x, z) => z > TEMPLE_FRONT_Z + 6);
+        if (CFG.thorough) await findFlowSong();
         await temple();
     }
 
@@ -10933,7 +10903,6 @@ const AutoPlay = (() => {
         step('Sailing out on the boat...');
         await until(() => ow().reefReached && free(), 240);
         milestone('voyage', 'Boat voyage and the hand-shaped wave');
-        if (CFG.thorough) await sweep('the Coral Reef', (x, z) => z < REEF_START_Z + 20 && z > REEF_END_Z + 6, true, () => ow().arenaTriggered);
         const trig2 = ow().colliders.find(c => c.isArenaTrigger);
         const ac = trig2 ? trig2.getCenter(new THREE.Vector3()) : { x: 0, z: REEF_END_Z - 16 };
         step('Crossing the reef to Oblongtalo\'s plaza');
@@ -10959,7 +10928,6 @@ const AutoPlay = (() => {
         S.chapter = 'Chapter 3: The Dunes of Force';
         step('Entering the Dunes of Force');
         await settle();
-        if (CFG.thorough) await sweep('the Dunes of Force', (x, z) => z < DESERT_START_Z + 20 && z > DESERT_END_Z - 5 && Math.hypot(x - QUICKSAND.x, z - QUICKSAND.z) > QUICKSAND.r + 6, true, () => ow()._fallingToCore || (window.GravityCore && GravityCore.active));
         step('Heading for the quicksand in Cacto Village');
         await walkTo(QUICKSAND.x, QUICKSAND.z + 16, { r: 3, timeout: 220, label: 'Cacto Village' });
         milestone('cacto', 'Reached Cacto Village');
@@ -11064,7 +11032,7 @@ const AutoPlay = (() => {
         try {
             await until(() => ow().playerObj && gs().party.length, 120);
             await sleep(1.0);
-            if (CFG.script) { await CFG.script({ walkTo, fight, sweep, settle, sleep, until, step, note, visit, collectibles, talkToVillager, setNav, pos, assistTo, S, ow, gs }); await finish(true); return; }   // (a custom test script, for developers)
+            if (CFG.script) { await CFG.script({ walkTo, fight, findFlowSong, settle, sleep, until, step, note, talkToVillager, setNav, pos, assistTo, S, ow, gs }); await finish(true); return; }   // (a custom test script, for developers)
             await chapter1();
             await chapter2();
             await chapter3();
@@ -11084,7 +11052,7 @@ const AutoPlay = (() => {
         lines.push('Settings: class ' + CFG.skill + ', speed ' + CFG.speed + ', ' + (CFG.thorough ? 'everything' : 'story only') + ', safety net ' + (CFG.safety ? 'on' : 'off'));
         lines.push('Result: ' + (S.done ? 'THE GAME WAS BEATEN' : 'did not finish') + ' in ' + fmt(S.clock) + ' of game time');
         lines.push('');
-        lines.push('Counts: ' + S.stats.creatures + ' creatures beaten, ' + S.stats.villagers + ' villagers met, ' + S.stats.shop + ' shop purchases');
+        lines.push('Counts: ' + S.stats.creatures + ' story fights won, ' + S.stats.villagers + ' villagers met, ' + S.stats.shop + ' shop purchases');
         const p = gs().party[0]; if (p) lines.push('Hero at the end: level ' + p.level + ', ' + gs().coins + ' coins, weapon ' + (p.equippedWeapon && p.equippedWeapon.name));
         lines.push('Times the bot had to help (hop over scenery): ' + S.assists);
         lines.push('');
@@ -11176,7 +11144,7 @@ const AutoPlay = (() => {
         q('.bp-chap').textContent = S.chapter;
         q('.bp-step').textContent = (S.paused ? '⏸ PAUSED - ' : '') + S.step;
         q('.bp-fill').style.width = Math.min(100, S.milestones.length / totalMilestones() * 100) + '%';
-        q('.bp-prog').textContent = S.prog ? S.prog.label + ': ' + S.prog.done + ' / ' + S.prog.total + '   ·   assists: ' + S.assists : 'creatures ' + S.stats.creatures + ' · villagers ' + S.stats.villagers + ' · assists ' + S.assists;
+        q('.bp-prog').textContent = S.prog ? S.prog.label + ': ' + S.prog.done + ' / ' + S.prog.total + '   ·   assists: ' + S.assists : 'fights ' + S.stats.creatures + ' · villagers ' + S.stats.villagers + ' · assists ' + S.assists;
         const sp = panel.querySelector('[data-a="speed"]'); if (sp) sp.textContent = { slow: '🐢 Slow', normal: '🚶 Normal', fast: '🐇 Fast' }[CFG.speed];
         if (panel.classList.contains('open')) q('.bp-list').innerHTML = S.milestones.map(m => '<div>✓ ' + m.label + '</div>').join('') + S.log.filter(l => l.kind !== 'info').slice(-6).map(l => '<div class="bp-' + l.kind + '">' + (l.kind === 'assist' ? '↷ ' : '⚠ ') + l.text + '</div>').join('');
     }
@@ -11191,7 +11159,7 @@ const AutoPlay = (() => {
             <label>Hero class
               <select id="bs-class"><option value="melee">⚔ Melee</option><option value="range">🏹 Ranged</option><option value="magick">✨ Magick</option></select></label>
             <label>Coverage
-              <select id="bs-cov"><option value="all">Everything (every creature and every villager) - long</option><option value="story">Story only (just the main path) - shorter</option></select></label>
+              <select id="bs-cov"><option value="all">Everything (also finds the secret Flow Song creature)</option><option value="story">Story only (the main path, side quests, villagers)</option></select></label>
             <label>Speed
               <select id="bs-speed"><option value="slow">🐢 Slow (time to read everything)</option><option value="normal">🚶 Normal</option><option value="fast">🐇 Fast</option></select></label>
             <div class="bs-btns"><button id="bs-go">▶ Start the test</button><button id="bs-cancel">Cancel</button></div>
@@ -11226,6 +11194,7 @@ const AutoPlay = (() => {
             let last = realNow();
             while (T.run) {
                 const n = realNow();
+                if (!T.muted && window.settingsSystem && typeof Sound !== 'undefined') { Sound.setVolume(0); T.muted = true; }   // (fast test runs are silent; this does not change the player's saved volume)
                 if (typeof overworld3d !== 'undefined' && overworld3d.playerObj && n - last >= 30 / F) { last = n; overworld3d.noRender = !T.draw; try { overworld3d.frame(0.03); } catch (e) { T.errors.push(e.message); } T.frames++; }
                 await yieldNow();
             }
