@@ -43,7 +43,7 @@ const AutoPlay = (() => {
     function step(text) { S.step = text; say('info', text); updatePanel(true); }
     function note(kind, text) { say(kind, text); if (kind === 'assist') { S.assists++; S.stats.assists++; } }
     function milestone(id, label) { S.milestones.push({ id, label, t: S.clock }); say('info', '✓ ' + label); updatePanel(true); }
-    const totalMilestones = () => CFG.thorough ? 20 : 17;
+    const totalMilestones = () => CFG.thorough ? 22 : 19;
 
     // ---------------------------------------------------------------- helpers about the world
     const free = () => { const g = gs(), o = ow(); return (g.state === 'overworld' || g.state === 'gauntlet') && !g.isCutscene && !(g.dialogueQueue && g.dialogueQueue.length) && !o.skyRide && !o.voyage && !o.kite && !(window.GravityCore && GravityCore.active) && o.cutsceneProgress === undefined; };
@@ -59,7 +59,12 @@ const AutoPlay = (() => {
     const keys = () => ow().keys;
     function releaseKeys() { const k = keys(); k['w'] = k['a'] = k['s'] = k['d'] = k[' '] = false; }
     function assistTo(x, z, why) {
-        const o = ow(); pos().set(x, o.groundHeight ? o.groundHeight(x, z) : 0, z); o.isJumping = false; o.grounded = true; o.velocityY = 0;
+        const o = ow();
+        if (o.skyReached && !o.skyWalkable(x, z)) {          // up in the clouds: land on the nearest bit of cloud, never in the open sky
+            let found = false;
+            for (let r = 1; r <= 40 && !found; r++) for (let k = 0; k < 16 && !found; k++) { const a = k / 16 * Math.PI * 2, cx = x + Math.cos(a) * r, cz = z + Math.sin(a) * r; if (o.skyWalkable(cx, cz) && o.skyWalkable(cx + 1, cz) && o.skyWalkable(cx - 1, cz) && o.skyWalkable(cx, cz + 1) && o.skyWalkable(cx, cz - 1)) { x = cx; z = cz; found = true; } }
+        }
+        pos().set(x, o.groundHeight ? o.groundHeight(x, z) : 0, z); o.isJumping = false; o.grounded = true; o.velocityY = 0;
         if (o.isClimbing) o.exitClimb();
         note('assist', why);
     }
@@ -584,6 +589,40 @@ const AutoPlay = (() => {
         await sleep(0.4);
     }
 
+    // walk up to the cat / a clue and press E on it
+    async function interact(ent, label) {
+        await walkTo(ent.mesh.position.x, ent.mesh.position.z, { r: ent.type === 'clue' ? 1.4 : 2.4, timeout: 90, label });
+        for (let tries = 0; tries < 5; tries++) {
+            await until(() => ow().nearPick === ent, 3);
+            await sleep(0.4 * PM() + 0.2);
+            press('e');
+            if (await until(() => gs().state === 'dialogue', 2.5)) break;
+        }
+        await settle();
+    }
+
+    // the two side quests of Makani (they were offered during the villagers' second chat)
+    async function sideQuests() {
+        const o = ow(), get = (id) => o.entities.find(e => e.type === 'villager' && e.v.id === id);
+        if (o.side.cat.state === 'active') {
+            step('Side quest: finding Malie\'s lost cat');
+            const cat = o.entities.find(e => e.type === 'cat');
+            if (cat) { await interact(cat, 'the lost cat'); await until(() => o.side.cat.state === 'found', 60); }
+            step('Side quest: telling Malie the cat is home');
+            await talkToVillager(get('malie'), true); await settle();
+            if (o.side.cat.state === 'done') milestone('cat', 'Side quest done: found Malie\'s cat'); else note('warn', 'The missing-cat quest did not finish');
+        }
+        if (o.side.wind.state === 'active') {
+            step('Side quest: investigating the fast windmills');
+            for (const clue of o.entities.filter(e => e.type === 'clue')) { await interact(clue, 'a windmill clue'); }
+            const bully = o.entities.find(e => e.type === 'bully');
+            if (bully && o.side.wind.state === 'confront') { step('Side quest: confronting the cloud-school bully'); await interact(bully, 'the bully'); await until(() => o.side.wind.state === 'stopped', 30); }
+            step('Side quest: telling Kekoa what was found');
+            await talkToVillager(get('kekoa'), true); await settle();
+            if (o.side.wind.state === 'done') milestone('windmill', 'Side quest done: the Windmill Mystery'); else note('warn', 'The windmill quest did not finish');
+        }
+    }
+
     async function chapter4() {
         S.chapter = 'Chapter 4: The Sky Kingdom - Makani Village';
         step('Exploring the Sky Kingdom');
@@ -600,6 +639,7 @@ const AutoPlay = (() => {
             if (v.v.shop) await cashatoTalk(v, true); else { await talkToVillager(v, true); await settle(); }
         }
         milestone('villagers2', 'Chatted with every villager a second time');
+        await sideQuests();
         const io = order.find(v => v.v.id === 'iolana');
         if (io) {
             await talkToVillager(io, true);                      // her second talk is the kite race offer

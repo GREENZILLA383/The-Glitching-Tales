@@ -375,7 +375,8 @@ class GameSystem3D {
     talkToVillager(ent) {
         const v = ent.v, ow = overworld3d, first = !ow.metVillagers.has(v.id);
         ow.metVillagers.add(v.id);
-        if (v.id === 'iolana' && !first) { this.offerKiteRace(ent); return; }   // after the first hello, she offers her kite race
+        if (v.id === 'iolana' && !first) { this.offerKiteRace(ent); return; }
+        if (window.SideQuests && SideQuests.talkVillager(ent, first)) return;      // Kekoa / Malie: a side quest starts, or finishes   // after the first hello, she offers her kite race
         const lines = first ? v.intro.slice() : [v.chat[(ent.chatIdx = ((ent.chatIdx === undefined ? -1 : ent.chatIdx) + 1)) % v.chat.length]];
         const who = v.name + ', ' + v.title;
         if (v.shop) this.afterTalk = () => window.shopSystem.openShop(v.shop);      // (the trader: the shop opens when the chat is over)

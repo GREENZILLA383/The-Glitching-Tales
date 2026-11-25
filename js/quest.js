@@ -47,6 +47,8 @@ const Quest = (() => {
         if (gs.state === 'gauntlet' || ow.oblongtaloMesh) return { text: "Survive Oblongtalo's charges!" };
         if (ow.skyReached) {
             if (Math.hypot(pos.x - MAKANI.x, pos.z - MAKANI.z) < 120) {
+                const sq = window.SideQuests && SideQuests.objective();       // a side quest you have taken on comes first
+                if (sq) return sq;
                 const met = ow.metVillagers ? ow.metVillagers.size : 0;
                 if (met < VILLAGERS.length) {   // lead the way to the nearest villager you haven't met yet
                     let best = null, bd = 1e12;

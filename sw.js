@@ -3,7 +3,7 @@
 // when you're offline, play from the saved copy. Bump CACHE when you want everyone's old copies thrown away.
 const CACHE = 'glitching-tales-v1';
 const APP = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',
-    'js/voxel.js', 'js/models3d.js', 'js/animations.js', 'js/villagers.js', 'js/kiterace.js', 'js/autoplay.js', 'js/audio.js', 'js/combat3d.js', 'js/overworld3d.js', 'js/charactercreation.js',
+    'js/voxel.js', 'js/models3d.js', 'js/animations.js', 'js/villagers.js', 'js/kiterace.js', 'js/sidequests.js', 'js/autoplay.js', 'js/audio.js', 'js/combat3d.js', 'js/overworld3d.js', 'js/charactercreation.js',
     'js/savegame.js', 'js/quest.js', 'js/gravitycore.js', 'js/mobile.js', 'js/main3d.js'];
 const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
     'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js'];

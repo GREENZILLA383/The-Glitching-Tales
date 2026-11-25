@@ -61,6 +61,7 @@ const SaveGame = (() => {
             desert: !!ow.desertReached,
             sky: !!ow.skyReached,
             met: [...(ow.metVillagers || [])],
+            side: ow.side || null,
             kite: { best: ow.kiteBest == null ? null : +ow.kiteBest.toFixed(2), medal: ow.kiteMedal || 0 },
             coinsTaken: ow.collectedCoins || [],
             flow: { unlocked: Sound.flowUnlocked, on: Sound.flowOn }
@@ -117,6 +118,7 @@ const SaveGame = (() => {
         if (d.reef) { ow.reefReached = true; ow.handWaveTriggered = true; } // already past the boat: back in the Coral Reef
         if (d.desert) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; } // Chapter 3: the Dunes of Force
         if (d.met) ow.metVillagers = new Set(d.met);
+        if (d.side && ow.side) { ow.side = d.side; if (window.SideQuests) SideQuests.restore(); }
         if (d.kite) { ow.kiteBest = d.kite.best == null ? null : d.kite.best; ow.kiteMedal = d.kite.medal || 0; }
         if (d.sky) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; ow.skyReached = true; ow.perchSkyCloud(); } // Chapter 4: the Sky Kingdom
 

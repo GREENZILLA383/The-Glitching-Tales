@@ -97,7 +97,7 @@ const Mobile = (() => {
             const gs = window.gameSystem;
             const playing = !!(gs && overworld3d.playerObj && (gs.state === 'overworld' || gs.state === 'gauntlet' || gs.state === 'core' || gs.state === 'kite') && !gs.isCutscene);
             root.classList.toggle('mc-off', !playing);
-            talkBtn.classList.toggle('show', playing && !!overworld3d.nearVillager);
+            talkBtn.classList.toggle('show', playing && !!overworld3d.nearPick);
             if (!playing && wasPlaying) releaseAll();
             wasPlaying = playing;
             if (playing && !showHint.done) showHint();

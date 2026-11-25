@@ -105,6 +105,17 @@ function buildVillagerParts(v) {
         add({ shape: 'sphere', size: [0.7, 0.8, 0.6], pos: [1.0, 1.5, 0.35], color: '#7a4a2a' });
         add({ shape: 'sphere', size: [0.3, 0.25, 0.3], pos: [1.0, 2.0, 0.35], color: '#ffd24a', emissive: '#ffae00' });
     }
+    // big feathered wings that can flap (the bully's); each hangs from a shoulder pivot called wing_l / wing_r
+    if (v.wings) [[-1, 'wing_l'], [1, 'wing_r']].forEach(([s, nm]) => {
+        add({ shape: 'capsule', size: [0.5, 2.8, 0.16], pos: [s * 1.7, 3.9, -1.1], rot: [0, 0, -s * 0.75], color: '#ffffff', name: nm, pivot: [s * 0.9, 3.1, -0.85] });
+        add({ shape: 'capsule', size: [0.42, 2.3, 0.14], pos: [s * 2.1, 3.3, -1.15], rot: [0, 0, -s * 0.95], color: '#e8eefc', follow: nm });
+        add({ shape: 'capsule', size: [0.36, 1.8, 0.12], pos: [s * 2.35, 2.7, -1.2], rot: [0, 0, -s * 1.15], color: '#cfd9f2', follow: nm });
+    });
+    if (v.extra === 'schoolcap') {   // a flat square school cap with a gold tassel (cloud school!)
+        X({ shape: 'cylinder', size: [1.3, 0.5, 1.3], pos: [0, 5.25, 0], color: '#2b2f6e' });
+        X({ shape: 'box', size: [2.2, 0.16, 2.2], pos: [0, 5.55, 0], color: '#2b2f6e' });
+        X({ shape: 'capsule', size: [0.12, 0.8, 0.12], pos: [1.0, 5.2, 0], color: '#ffcf4a', emissive: '#ffae00' });
+    }
     return P;
 }
 

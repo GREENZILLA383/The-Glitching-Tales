@@ -115,7 +115,7 @@ class Overworld3D {
         this.reefReached = false;         // the wave has carried the player into the Coral Reef
         this.desertReached = false;       // Oblongtalo sent the player to the Dunes of Force (Chapter 3)
         this.metVillagers = new Set();    // Makani villagers you have talked to
-        this.nearVillager = null; this.talkingTo = null;
+        this.nearVillager = null; this.nearPick = null; this.talkingTo = null;
         this.desertEndTriggered = false;
         this.dunes = [];                  // the shifting dunes
         this.voyage = null;               // the boat cutscene, while it runs
@@ -403,7 +403,11 @@ class Overworld3D {
             this.motes.material.color.copy(this.moteColorCoast).lerp(this.moteColorOcean, ocean);
         }
         this.updateTalkPrompt();
-        if (this.skyReached && this.makaniVanes) this.makaniVanes.forEach(v => { v.g.rotation.z = v.ph + t * v.sp; });   // windmills and pinwheels
+        if (this.skyReached && this.makaniVanes) {                                          // windmills and pinwheels (the windmills spin crazy-fast until the Windmill Mystery is solved)
+            const mul = this.windMul || 1;
+            this.makaniVanes.forEach(v => { v.a = (v.a === undefined ? v.ph : v.a) + delta * v.sp * (v.kind === 'windmill' ? mul : 1); v.g.rotation.z = v.a; });
+            if (window.SideQuests) SideQuests.update(delta);
+        }
         if (this.skyReached && this.skyCloud && this.skyCloud.visible && !this.skyRide) {   // the parked cloud bobs gently
             this.skyCloud.position.y = 3.4 + Math.sin(t * 1.3) * 0.35;
             this.animateSkyCloud(this.skyCloud, t, 0.5);
@@ -625,7 +629,7 @@ class Overworld3D {
         for (const c of this.cullables) { const dx = c.x - px, dz = c.z - pz; c.o.visible = dx * dx + dz * dz < (c.near ? SMALL2 : D2); }
         if (this.arenaGroup) { const dx = this.arenaCenter.x - px, dz = this.arenaCenter.z - pz, R = D + 45; this.arenaGroup.visible = dx * dx + dz * dz < R * R; } // the plaza is big: hide it when far away
         for (const e of this.entities) {
-            if (!e.mesh || e.type === 'story_npc' || e.type === 'shopkeeper') continue;
+            if (!e.mesh || e.type === 'story_npc' || e.type === 'shopkeeper' || e.type === 'cat' || e.type === 'clue' || e.type === 'bully') continue;
             const dx = e.mesh.position.x - px, dz = e.mesh.position.z - pz;
             e.mesh.visible = dx * dx + dz * dz < CREATURE2;
         }
@@ -2728,31 +2732,35 @@ class Overworld3D {
         this.colliders.push(new THREE.Box3(new THREE.Vector3(x - 1.1, 0, z - 1.1), new THREE.Vector3(x + 1.1, 5, z + 1.1)));
     }
 
-    // Find the villager you're standing next to (so you can talk) and show / hide the "press E" hint.
+    // Find the villager (or the cat, or a clue) you're standing next to, so you can talk to it, and show / hide the "press E" hint.
     updateTalkPrompt() {
         const gs = window.gameSystem, el = document.getElementById('talk-prompt');
-        let near = null;
+        let near = null, other = null;
         if (this.skyReached && this.playerObj && gs.state === 'overworld' && !gs.isCutscene && !this.skyRide && !this.voyage) {
-            const p = this.playerObj.position; let best = 49;
+            const p = this.playerObj.position; let best = 49, bestO = 1e9;
             for (const e of this.entities) {
-                if (e.type !== 'villager' || !e.mesh.visible) continue;
+                if (!e.mesh || !e.mesh.visible) continue;
                 const dx = e.mesh.position.x - p.x, dz = e.mesh.position.z - p.z, d2 = dx * dx + dz * dz;
-                if (d2 < best) { best = d2; near = e; }
+                if (e.type === 'villager') { if (d2 < best) { best = d2; near = e; } }
+                else if ((e.type === 'cat' || e.type === 'clue' || e.type === 'bully') && d2 < (e.radius || 5) * (e.radius || 5) && d2 < bestO) { bestO = d2; other = e; }
             }
-        }
+            // a villager wins unless the cat / clue is clearly closer
+            this.nearPick = (other && (!near || Math.sqrt(bestO) + 2 < Math.sqrt(best))) ? other : near;
+        } else this.nearPick = null;
         this.nearVillager = near;
+        const pick = this.nearPick;
         if (el) {
-            if (near && !this.isMobile) { el.textContent = '💬  Press E to talk to ' + near.v.name; el.classList.remove('hidden'); }
+            if (pick && !this.isMobile) { el.textContent = '💬  Press E to ' + (pick.type === 'villager' ? 'talk to ' + pick.v.name : pick.label); el.classList.remove('hidden'); }
             else el.classList.add('hidden');
         }
     }
 
-    // Talk to the villager next to you (the E key, or the 💬 button on a phone).
+    // Talk to whatever is next to you (the E key, or the 💬 button on a phone).
     tryTalk() {
-        const e = this.nearVillager, gs = window.gameSystem;
+        const e = this.nearPick, gs = window.gameSystem;
         if (!e || gs.state !== 'overworld' || gs.isCutscene) return;
-        this.talkingTo = e;
-        gs.talkToVillager(e);
+        if (e.type === 'villager') { this.talkingTo = e; gs.talkToVillager(e); }
+        else if (window.SideQuests) SideQuests.use(e);
     }
 
     // Can the player stand here? The city's round cloud, the cloud road, and every cloud of Makani Village.
@@ -2829,7 +2837,7 @@ class Overworld3D {
                 put(mesh(new THREE.BoxGeometry(h * 0.04, bl, h * 0.02), M(0x7a5a3a)), 0, bl / 2, 0, arm);
                 put(mesh(new THREE.BoxGeometry(bl * 0.2, bl * 0.8, h * 0.012), M(k % 2 ? 0xffffff : roof)), bl * 0.12, bl * 0.55, 0, arm);
             }
-            this.makaniVanes.push({ g: blades, sp: spd, ph: rnd() * 6 });
+            this.makaniVanes.push({ g: blades, sp: spd, ph: rnd() * 6, kind: 'windmill' });
             return { w, blades };
         };
         const great = windmill(26, 15, 0xf0627f, 0.5); great.w.position.set(0, 0, 0); plaza.add(great.w);
@@ -2923,6 +2931,7 @@ class Overworld3D {
             const dx = V.x - sx, dz = V.z - sz, L = Math.hypot(dx, dz);
             this.spawnVillager(VILLAGERS[8], sx + dx / L * 6.5, sz + dz / L * 6.5, Math.atan2(dx, dz));                            // Cashato stands behind the counter
             this.buildSignpost(sx + dx / L * 14 - dz / L * 7, sz + dz / L * 14 + dx / L * 7, ["CASHATO'S", 'CLOUD MARKET']);
+            this.makaniInfo = { plots, shop: { x: sx, z: sz } };
         }
 
         // ---- the long cloud road from the cloud city, with lanterns and kites along it ----
@@ -2948,6 +2957,7 @@ class Overworld3D {
         // ---- signs ----
         this.buildSignpost(C.x + 12, C.z - 128, ['Makani Village', 'Follow the cloud road north']);
         this.buildSignpost(V.x + 11, V.z + 46, ['MAKANI VILLAGE', 'Where the wind lives']);
+        if (typeof SideQuests !== 'undefined') SideQuests.init(this);      // the windmill mystery and the missing cat
     }
 
     // The friendly giant cloud that carries you up: a puffy white body with a smiling face and a wispy tail.
@@ -3709,7 +3719,7 @@ class Overworld3D {
         const px = this.playerObj.position.x, pz = this.playerObj.position.z;
         for (const e of this.entities) {
             const m = e.mesh;
-            if (!m || !m.visible || e.type === 'treasure') continue;
+            if (!m || !m.visible || e.type === 'treasure' || e.type === 'cat' || e.type === 'clue' || e.type === 'bully') continue;
             const dx = m.position.x - px, dz = m.position.z - pz, d2 = dx * dx + dz * dz;
             if (d2 > 95 * 95) continue; // too far to see the details; save the work
             if (e.type === 'song') { this.animateFlowSong(m, px, pz, delta); continue; }
