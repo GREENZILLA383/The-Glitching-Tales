@@ -214,6 +214,7 @@ const Sound = (() => {
         reef:    { bpm: 92,  root: 62, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [-5, -1, 2, 6], [-3, 0, 4, 7], [-7, -3, 0, 4]], mel: 0.5, pluck: 'bell', padLp: 800, drone: true },
         core:    { bpm: 138, root: 43, scale: [0, 2, 3, 7, 8, 10], prog: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-7, -4, 0]], mel: 0.6, pluck: 'sawtooth', padLp: 600, drums: true, padType: 'sawtooth', drone: true },
         dunes:   { bpm: 84,  root: 57, scale: [0, 1, 4, 5, 7, 8, 10], prog: [[0, 4, 7], [1, 5, 8], [0, 4, 7], [-2, 2, 5]], mel: 0.36, pluck: 'triangle', padLp: 700, drone: true, thump: false },
+        guards:  { bpm: 156, root: 43, scale: [0, 2, 3, 5, 7, 8, 10], prog: [[0, 3, 7], [-4, 0, 3], [-9, -5, -2], [-7, -3, 0]], mel: 0.75, pluck: 'sawtooth', padLp: 1300, drums: true, padType: 'sawtooth', thump: true, drone: true, epic: true },   // EPIC: the Sky Guards
         sky:     { bpm: 88,  root: 65, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7, 11], [5, 9, 12], [7, 11, 14], [4, 7, 11]], mel: 0.5, pluck: 'bell', padLp: 1500, arp: true },
         flow:    { bpm: 104, root: 64, scale: [0, 2, 4, 7, 9], prog: [[0, 4, 7], [-3, 0, 4], [-8, -4, -1], [-5, -1, 2]], mel: 0.7, pluck: 'sine', padLp: 1200, arp: true },
     };
@@ -239,6 +240,11 @@ const Sound = (() => {
         else tone({ f: mf(m.root + chord[0] - 24), dur: barLen * 0.9, at: rel, type: bassT, vol: 0.14, bus: dest, attack: 0.04 });
         if (m.drone) pad(mf(m.root - 24), rel, barLen + 1.5, 0.09, { dest, lp: 260, type: 'sine', attack: 2 });
         if (m.thump) tone({ f: 62, to: 38, dur: 0.5, at: rel, vol: 0.25, bus: dest });
+        // EPIC mode: big brassy power chords on the downbeat and the "and" of beat 3, and a rising cymbal swell every fourth bar
+        if (m.epic) {
+            chord.forEach(c => { tone({ f: mf(m.root + c), dur: beat * 1.4, at: rel, type: 'sawtooth', vol: 0.055, bus: dest, lp: 2000, send: 0.45, attack: 0.02 }); tone({ f: mf(m.root + c + 12), dur: beat * 0.7, at: rel + beat * 2.5, type: 'sawtooth', vol: 0.045, bus: dest, lp: 2200, send: 0.4, attack: 0.02 }); });
+            if (bar % 4 === 3) noise({ type: 'highpass', f: 3500, dur: beat * 3.5, at: rel, vol: 0.07, attack: beat * 3, bus: dest });
+        }
         // Drums
         if (m.drums) {
             for (let i = 0; i < 8; i++) {

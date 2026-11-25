@@ -42,6 +42,8 @@ const SKY = { x: -2200, z: DESERT_END_Z - 600 };
 const SKY_RADIUS = 150;
 // Makani Village (Chapter 4): a village of cloud roads and houses held up by clouds, a long cloud road north of the cloud city.
 const MAKANI = { x: SKY.x, z: SKY.z - 340 };
+// The Stairs of Foam (Chapter 4's end): a long cloud road north of Makani leads to the Sky Guards' arena at the foot of the stairs that climb to the Sun of Time.
+const FOAM = { x: MAKANI.x, z: MAKANI.z - 235 };
 
 class Overworld3D {
     constructor() {
@@ -407,6 +409,8 @@ class Overworld3D {
             const mul = this.windMul || 1;
             this.makaniVanes.forEach(v => { v.a = (v.a === undefined ? v.ph : v.a) + delta * v.sp * (v.kind === 'windmill' ? mul : 1); v.g.rotation.z = v.a; });
             if (window.SideQuests) SideQuests.update(delta);
+            if (window.SkyGuards) SkyGuards.update(delta);
+            if (this.sunOfTime) this.sunOfTime.ring.rotation.z += delta * 0.15;
         }
         if (this.skyReached && this.skyCloud && this.skyCloud.visible && !this.skyRide) {   // the parked cloud bobs gently
             this.skyCloud.position.y = 3.4 + Math.sin(t * 1.3) * 0.35;
@@ -590,6 +594,7 @@ class Overworld3D {
         let mood = 'wild';
         if (gs.state === 'gauntlet' || this.oblongtaloMesh) mood = 'gauntlet';
         else if (croton && Math.hypot(p.x - croton.mesh.position.x, p.z - croton.mesh.position.z) < 45) mood = 'boss';
+        else if (window.SkyGuards && SkyGuards.active) mood = 'guards';           // EPIC: the Sky Guards
         else if (this.skyReached) mood = 'sky';
         else if (this.desertReached) mood = 'dunes';
         else if (this.reefReached && p.z < REEF_START_Z + 30 && p.z > REEF_END_Z - 6) mood = 'reef';
@@ -2742,7 +2747,7 @@ class Overworld3D {
                 if (!e.mesh || !e.mesh.visible) continue;
                 const dx = e.mesh.position.x - p.x, dz = e.mesh.position.z - p.z, d2 = dx * dx + dz * dz;
                 if (e.type === 'villager') { if (d2 < best) { best = d2; near = e; } }
-                else if ((e.type === 'cat' || e.type === 'clue' || e.type === 'bully') && d2 < (e.radius || 5) * (e.radius || 5) && d2 < bestO) { bestO = d2; other = e; }
+                else if ((e.type === 'cat' || e.type === 'clue' || e.type === 'bully' || (e.guard && window.SkyGuards && SkyGuards.canTalk())) && d2 < (e.radius || 5) * (e.radius || 5) && d2 < bestO) { bestO = d2; other = e; }
             }
             // a villager wins unless the cat / clue is clearly closer
             this.nearPick = (other && (!near || Math.sqrt(bestO) + 2 < Math.sqrt(best))) ? other : near;
@@ -2760,6 +2765,7 @@ class Overworld3D {
         const e = this.nearPick, gs = window.gameSystem;
         if (!e || gs.state !== 'overworld' || gs.isCutscene) return;
         if (e.type === 'villager') { this.talkingTo = e; gs.talkToVillager(e); }
+        else if (e.guard) { if (window.SkyGuards) SkyGuards.talk(); }
         else if (window.SideQuests) SideQuests.use(e);
     }
 
@@ -2949,6 +2955,39 @@ class Overworld3D {
         }
         this.mergeGroup(lamps, { flat: true, castShadow: false }); g.add(lamps);
 
+        // ---- the road north to the Stairs of Foam, the Sky Guards' arena, the great gate, the stairs, and the Sun of Time ----
+        {
+            const F = FOAM, gold = M(0xffd24a, { emissive: 0xffae00, emissiveIntensity: 0.5, roughness: 0.4 });
+            road(V.x, V.z - 26, F.x, F.z + 52, 7);                                              // the road
+            disc(F.x, F.z, 52, plazaMat, 0.05);                                                 // the arena: a big round cloud
+            const arena = new THREE.Group();
+            [30, 14].forEach(r => { const t = mesh(new THREE.TorusGeometry(r, 0.5, 6, 64), band); t.rotation.x = Math.PI / 2; t.position.set(0, 0.25, 0); arena.add(t); });
+            for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; put(mesh(new THREE.CylinderGeometry(0.5, 0.7, 6, 8), stone), Math.sin(a) * 47, 3, Math.cos(a) * 47, arena); put(mesh(new THREE.SphereGeometry(0.9, 8, 6), gold), Math.sin(a) * 47, 6.4, Math.cos(a) * 47, arena); }   // a ring of posts round the edge
+            arena.position.set(F.x, 0, F.z); this.mergeGroup(arena, { flat: true, castShadow: false }); g.add(arena);
+            // the great gate at the north edge of the arena
+            const gate = new THREE.Group();
+            [-1, 1].forEach(sd => { put(mesh(new THREE.CylinderGeometry(1.8, 2.3, 20, 12), stone), sd * 12, 10, 0, gate); put(mesh(new THREE.SphereGeometry(2.5, 12, 8), gold), sd * 12, 20.8, 0, gate); put(mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.7, 12), band), sd * 12, 4, 0, gate); });
+            put(mesh(new THREE.TorusGeometry(12, 1.5, 8, 36, Math.PI), stone), 0, 20, 0, gate);
+            put(mesh(new THREE.SphereGeometry(2.2, 10, 8), gold), 0, 32.4, 0, gate);
+            gate.position.set(F.x, 0, F.z - 46); this.mergeGroup(gate, { flat: true, castShadow: false }); g.add(gate);
+            [-1, 1].forEach(sd => this.colliders.push(new THREE.Box3(new THREE.Vector3(F.x + sd * 12 - 2.3, 0, F.z - 46 - 2.3), new THREE.Vector3(F.x + sd * 12 + 2.3, 22, F.z - 46 + 2.3))));
+            // the Stairs of Foam: 28 wide steps of bubbly white cloud climbing into the sky
+            for (let i = 0; i < 28; i++) {
+                const z = F.z - 56 - i * 4.6, y = 1.4 + i * 2.3;
+                [-9, -4.5, 0, 4.5, 9].forEach(x => puff(F.x + x, y, z, 4.2, 1.9, 3.3));
+                for (let k = 0; k < 3; k++) puff(F.x + (rnd() - 0.5) * 22, y + 1.6 + rnd() * 0.8, z + (rnd() - 0.5) * 3, 0.9 + rnd() * 0.9, 0.9 + rnd() * 0.9, 0.9 + rnd() * 0.9);   // foam bubbles on top
+                if (i % 3 === 0) [-1, 1].forEach(sd => puff(F.x + sd * 14, y + 1.2, z, 2.4, 2.4, 2.4));                                       // lumps along the sides
+            }
+            // the Sun of Time, far up at the top of the stairs (Chapter 5)
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffe27a, fog: false });
+            const sun = new THREE.Mesh(new THREE.SphereGeometry(34, 28, 20), sunMat); sun.position.set(F.x, 150, F.z - 300); g.add(sun);
+            const halo = new THREE.Mesh(new THREE.SphereGeometry(52, 24, 16), new THREE.MeshBasicMaterial({ color: 0xffd36e, transparent: true, opacity: 0.22, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); halo.position.copy(sun.position); g.add(halo);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(66, 1.4, 8, 64), new THREE.MeshBasicMaterial({ color: 0xfff2b0, transparent: true, opacity: 0.55, fog: false, depthWrite: false, blending: THREE.AdditiveBlending })); ring.position.copy(sun.position); g.add(ring);
+            this.sunOfTime = { sun, halo, ring };
+            this.buildSignpost(V.x + 11, V.z - 42, ['STAIRS OF FOAM', 'Follow the road north']);
+            this.buildSignpost(F.x + 12, F.z + 58, ['STAIRS OF FOAM', 'Guarded by the Sky Guards']);
+        }
+
         // ---- all the cloud puffs, in one draw call ----
         const inst = new THREE.InstancedMesh(sphere, cloudMat, puffs.length), m4 = new THREE.Matrix4(), q0 = new THREE.Quaternion();
         puffs.forEach((p, i) => { m4.compose(new THREE.Vector3(p[0], p[1], p[2]), q0, new THREE.Vector3(p[3], p[4], p[5])); inst.setMatrixAt(i, m4); });
@@ -2958,6 +2997,7 @@ class Overworld3D {
         this.buildSignpost(C.x + 12, C.z - 128, ['Makani Village', 'Follow the cloud road north']);
         this.buildSignpost(V.x + 11, V.z + 46, ['MAKANI VILLAGE', 'Where the wind lives']);
         if (typeof SideQuests !== 'undefined') SideQuests.init(this);      // the windmill mystery and the missing cat
+        if (typeof SkyGuards !== 'undefined') SkyGuards.init(this);        // Stratus and Cirro at the Stairs of Foam
     }
 
     // The friendly giant cloud that carries you up: a puffy white body with a smiling face and a wispy tail.
@@ -3719,7 +3759,7 @@ class Overworld3D {
         const px = this.playerObj.position.x, pz = this.playerObj.position.z;
         for (const e of this.entities) {
             const m = e.mesh;
-            if (!m || !m.visible || e.type === 'treasure' || e.type === 'cat' || e.type === 'clue' || e.type === 'bully') continue;
+            if (!m || !m.visible || e.type === 'treasure' || e.type === 'cat' || e.type === 'clue' || e.type === 'bully' || e.custom) continue;
             const dx = m.position.x - px, dz = m.position.z - pz, d2 = dx * dx + dz * dz;
             if (d2 > 95 * 95) continue; // too far to see the details; save the work
             if (e.type === 'song') { this.animateFlowSong(m, px, pz, delta); continue; }

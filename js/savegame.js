@@ -24,7 +24,7 @@ const SaveGame = (() => {
         if (window.AutoPlay && (AutoPlay.active || AutoPlay.S.done)) return false;   // Test Mode never touches your real saved game
         if (gs.isCutscene || gs.state === 'gauntlet' || gs.state === 'gameover' || gs.state === 'menu') return false;
         // Not while the boat voyage runs or during Oblongtalo's challenge; the long Coral Reef is fine to save in.
-        if (ow.voyage || ow.skyRide || ow.kite || gs.state === 'choice' || ow.oblongtaloMesh || (window.GravityCore && GravityCore.active)) return false;
+        if (ow.voyage || ow.skyRide || ow.kite || ow.guardState === 'fighting' || gs.state === 'choice' || ow.oblongtaloMesh || (window.GravityCore && GravityCore.active)) return false;
         if (ow.arenaTriggered && !ow.desertReached) return false;
         if (ow.handWaveTriggered && !ow.reefReached) return false;
         if (gs.party[0].hp <= 0) return false;
@@ -48,7 +48,7 @@ const SaveGame = (() => {
                 level: p.level, exp: p.exp, expToNext: p.expToNext,
                 maxHp: p.maxHp, maxMp: p.maxMp, maxStamina: p.maxStamina,
                 attack: p.attack, defense: p.defense, speed: p.speed,
-                hasGlider: !!p.hasGlider,
+                hasGlider: !!p.hasGlider, hasCloudPass: !!p.hasCloudPass,
                 equippedWeapon: { ...w }, weaponIsDefault: w.name === p.defaultWeapon.name
             },
             hasOcta: gs.party.length > 1,
@@ -62,6 +62,7 @@ const SaveGame = (() => {
             sky: !!ow.skyReached,
             met: [...(ow.metVillagers || [])],
             side: ow.side || null,
+            guards: ow.guardState === 'done' ? 'done' : 'none',
             kite: { best: ow.kiteBest == null ? null : +ow.kiteBest.toFixed(2), medal: ow.kiteMedal || 0 },
             coinsTaken: ow.collectedCoins || [],
             flow: { unlocked: Sound.flowUnlocked, on: Sound.flowOn }
@@ -119,6 +120,7 @@ const SaveGame = (() => {
         if (d.desert) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; } // Chapter 3: the Dunes of Force
         if (d.met) ow.metVillagers = new Set(d.met);
         if (d.side && ow.side) { ow.side = d.side; if (window.SideQuests) SideQuests.restore(); }
+        if (d.guards === 'done') { ow.guardState = 'done'; if (window.SkyGuards) SkyGuards.restore(); }
         if (d.kite) { ow.kiteBest = d.kite.best == null ? null : d.kite.best; ow.kiteMedal = d.kite.medal || 0; }
         if (d.sky) { ow.reefReached = true; ow.handWaveTriggered = true; ow.arenaTriggered = true; ow.desertReached = true; ow.skyReached = true; ow.perchSkyCloud(); } // Chapter 4: the Sky Kingdom
 

@@ -37,8 +37,8 @@ const VILLAGERS = [
     { id: 'cashato', name: 'Cashato', title: 'the Cloud Trader', shop: 'cashato', skin: '#b9784c', robe: '#ffd76a', trim: '#ff8a3d', accent: '#2fb5a8', hair: '#3a2616', hairStyle: 'bob', extra: 'merchant', pattern: 'coins',
       intro: ['Ho ho! Cashato is the name and trading is the game! I swap coins for the finest gear in the sky.',
               'Cloud Spears, Cloud Arrows... everything here is spun from real cloud. Light as air, sharp as a thunderclap!',
-              'And one day I will have something very special for sale: a Cloud Stair Pass. But that is a story for another day. Now, what can I get you?'],
-      chat: ['Welcome back, my friend! A coin saved is a cloud earned.', 'Everything in my shop is made by hand. Well... by wind, mostly.', 'About that Cloud Stair Pass... patience, patience. Good things take time to float down!'] }
+              'And the star of my shop: the almighty Cloud Stair Pass! It is the only way up the Stairs of Foam to the Sun of Time. Two hundred and fifty coins, and worth every one. Now, what can I get you?'],
+      chat: ['Welcome back, my friend! A coin saved is a cloud earned.', 'Everything in my shop is made by hand. Well... by wind, mostly.', 'Got your Cloud Stair Pass? The Stairs of Foam are far north of the village. Fair warning: the Sky Guards there are... touchy about passes.'] }
 ];
 
 // Parts for one villager (feet on y = 0, about 5 tall). `head` and `scarf` hang from pivots so they can move.

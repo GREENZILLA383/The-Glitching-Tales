@@ -147,13 +147,15 @@ class CombatSystem {
     }
 
     damageEntity(ent, amount) {
+        if (ent.invuln) return;                                  // (e.g. a Sky Guard up in the air)
         ent.data.hp = Math.max(0, ent.data.hp - amount);
         this.flashHit(ent.mesh);
         if (ent.data.hp <= 0) {
+            if (ent.custom) { if (window.SkyGuards) SkyGuards.onDown(ent); return; }   // (the Sky Guards kneel instead of vanishing)
             this.killEntity(ent);
         } else {
             Sound.play('hit');
-            Animations.hurt(ent.mesh);
+            if (!ent.custom) Animations.hurt(ent.mesh);
             if (ent.aiState) ent.aiState.revealUntil = performance.now() / 1000 + 3;   // a hit snake gives up its camouflage
             // Knockback: regular enemies get shoved away from the player (the boss is too heavy)
             if (ent.type === 'enemy' && overworld3d.playerObj) {
@@ -423,6 +425,7 @@ class CombatSystem {
         const container = document.getElementById('boss-health-container');
         if (!container) return;
         if (window.GravityCore && GravityCore.active) return;   // the Gravity Core shows its own boss bar
+        if (window.SkyGuards && SkyGuards.active) return;       // so do the Sky Guards
         const croton = overworld3d.entities.find(e => e.bossId === 'croton');
         if (!croton) { container.classList.add('hidden'); return; }
         const playerPos = overworld3d.playerObj ? overworld3d.playerObj.position : null;
@@ -479,6 +482,7 @@ class CombatSystem {
 
         for (const ent of overworld3d.entities) {
             if (ent.type !== 'enemy' && ent.type !== 'boss') continue;
+            if (ent.custom) continue;                           // (they run their own show)
             const isCroton = ent.bossId === 'croton';
             const entPos = new THREE.Vector3(ent.mesh.position.x, 0, ent.mesh.position.z);
             const dist = playerPos.distanceTo(entPos);

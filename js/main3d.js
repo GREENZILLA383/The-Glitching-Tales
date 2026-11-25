@@ -463,7 +463,7 @@ class ShopSystem {
               weaponData: { name: 'Cloud Spear', playStyle: 'melee', power: 32, skillType: 'melee', durability: 60, maxDurability: 60 } },
             { id: 'weapon_cloud_arrow', name: 'Cloud Arrow', desc: 'Arrows of hardened cloud that glide straight to their target. Wears out with use.', price: 150, category: 'Weapon',
               weaponData: { name: 'Cloud Arrow', playStyle: 'range', power: 30, skillType: 'range', durability: 60, maxDurability: 60, projColor: 0xcfe9ff } },
-            { id: 'pass_cloud_stair', name: 'Cloud Stair Pass', desc: 'Cashato is hiding something under the counter... but it is not for sale yet.', price: 0, category: 'Pass', locked: true }
+            { id: 'pass_cloud_stair', name: 'Cloud Stair Pass', desc: 'The ALMIGHTY Cloud Stair Pass! The only way past the Sky Guards, up the Stairs of Foam to the Sun of Time. (You only need one.)', price: 250, category: 'Pass', passItem: true }
             ]
         };
         this.inventory = this.shops.octo.items;     // (the list of what the open shop sells)
@@ -500,13 +500,14 @@ class ShopSystem {
             const el = document.createElement('div');
             el.className = 'shop-item';
             const finalPrice = Math.max(1, Math.floor(item.price));
-            const canAfford = !item.locked && (this.game.coins || 0) >= finalPrice;
+            const owned = !!(item.passItem && player.hasCloudPass);
+            const canAfford = !item.locked && !owned && (this.game.coins || 0) >= finalPrice;
             const matched = item.weaponData && item.weaponData.skillType === player.skillType;
             el.innerHTML = `
                 <div class="item-name">${item.name} ${matched ? '⭐' : ''}</div>
                 <div class="item-desc">[${item.category}] ${item.desc}</div>
                 <div class="item-price">${item.locked ? '💰 ???' : '💰 ' + finalPrice}</div>
-                <button class="buy-btn" ${canAfford ? '' : 'disabled'}>${item.locked ? 'Not yet' : 'Buy'}</button>
+                <button class="buy-btn" ${canAfford ? '' : 'disabled'}>${item.locked ? 'Not yet' : owned ? 'Owned' : 'Buy'}</button>
             `;
             el.querySelector('.buy-btn').addEventListener('click', () => this.buyItem(item));
             this.shopItemsGrid.appendChild(el);
@@ -521,7 +522,10 @@ class ShopSystem {
         Sound.play('buy');
         const player = this.game.party[0];
 
-        if (item.weaponData) {
+        if (item.passItem) {
+            player.hasCloudPass = true;
+            this.game.showDialogue('System', 'You bought the Cloud Stair Pass! It shimmers in your hands. Take it to the Stairs of Foam, far north of Makani Village, and show it to the Sky Guards.');
+        } else if (item.weaponData) {
             player.equippedWeapon = { ...item.weaponData };
             this.game.showDialogue('System', `Equipped ${item.name}!`);
         } else if (item.stat) {

@@ -46,6 +46,8 @@ const Quest = (() => {
 
         if (gs.state === 'gauntlet' || ow.oblongtaloMesh) return { text: "Survive Oblongtalo's charges!" };
         if (ow.skyReached) {
+            const sg = window.SkyGuards && SkyGuards.objective(pos);       // the Stairs of Foam (a pass in your pocket, or you are at the arena)
+            if (sg && (sg.x === undefined || Math.hypot(pos.x - MAKANI.x, pos.z - MAKANI.z) >= 120 || SkyGuards.active || (gameSystem.party[0].hasCloudPass && !(window.SideQuests && SideQuests.objective())))) return sg;
             if (Math.hypot(pos.x - MAKANI.x, pos.z - MAKANI.z) < 120) {
                 const sq = window.SideQuests && SideQuests.objective();       // a side quest you have taken on comes first
                 if (sq) return sq;
@@ -59,6 +61,8 @@ const Quest = (() => {
                     const io = ow.entities.find(e => e.type === 'villager' && e.v.id === 'iolana');
                     if (io) return { text: 'Talk to Iolana again to try her kite race', x: io.mesh.position.x, z: io.mesh.position.z };
                 }
+                const ph = window.SkyGuards && SkyGuards.passHint();
+                if (ph) { const cz = ow.entities.find(e => e.type === 'villager' && e.v.id === 'cashato'); if (cz) return at(cz, ph); }
                 return { text: 'Explore Makani Village', x: MAKANI.x, z: MAKANI.z };
             }
             return { text: 'Follow the cloud road north to Makani Village', x: MAKANI.x, z: MAKANI.z + 30 };

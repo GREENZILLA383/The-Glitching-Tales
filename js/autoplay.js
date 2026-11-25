@@ -5,7 +5,8 @@
 //              the Temple of Crabs (only the crabs that block the way) and Croton
 //   Chapter 2  the Sea Gate + boat, the Coral Reef, Oblongtalo's challenge
 //   Chapter 3  the Dunes of Force, Cacto Village, the quicksand, Graton in the Gravity Core
-//   Chapter 4  Wisp's flight, the Sky Kingdom, all the villagers of Makani (twice each), Cashato's shop, both side quests and Iolana's Kite Ring Race
+//   Chapter 4  Wisp's flight, the Sky Kingdom, all the villagers of Makani (twice each), Cashato's shop, both side quests, Iolana's Kite Ring Race,
+//              and the finale: the Cloud Stair Pass, the Stairs of Foam and the Sky Guards boss fight
 //
 // It "presses the buttons" like a person: it steers the camera, holds W, swings / shoots, clicks through dialogue (waiting long
 // enough to read it), buys things in the shop, and presses E to talk. Your real saved game is never touched.
@@ -43,7 +44,7 @@ const AutoPlay = (() => {
     function step(text) { S.step = text; say('info', text); updatePanel(true); }
     function note(kind, text) { say(kind, text); if (kind === 'assist') { S.assists++; S.stats.assists++; } }
     function milestone(id, label) { S.milestones.push({ id, label, t: S.clock }); say('info', '✓ ' + label); updatePanel(true); }
-    const totalMilestones = () => CFG.thorough ? 20 : 19;
+    const totalMilestones = () => CFG.thorough ? 23 : 22;
 
     // ---------------------------------------------------------------- helpers about the world
     const free = () => { const g = gs(), o = ow(); return (g.state === 'overworld' || g.state === 'gauntlet') && !g.isCutscene && !(g.dialogueQueue && g.dialogueQueue.length) && !o.skyRide && !o.voyage && !o.kite && !(window.GravityCore && GravityCore.active) && o.cutsceneProgress === undefined; };
@@ -365,7 +366,7 @@ const AutoPlay = (() => {
             await sleep(0.12);
         }
         aim = null; nav = null; releaseKeys();
-        if (alive(ent)) { note('warn', 'Could not finish off ' + name + ' in time - moving on'); return false; }
+        if (alive(ent)) { if (!opts.quiet) note('warn', 'Could not finish off ' + name + ' in time - moving on'); return false; }
         S.stats.creatures++;
         await sleep(0.4 * PM());
         return true;
@@ -413,7 +414,12 @@ const AutoPlay = (() => {
         // everything on sale, once: charms first, then gear that is not for this hero, and last the gear that IS (so that ends up equipped)
         const skill = gs().party[0].skillType;
         const inv = shopSystem.inventory;
-        const rank = (i) => i.category === 'Charm' ? 0 : (i.weaponData && i.weaponData.skillType === skill) ? 2 : 1;
+        const passItem = inv.find(i => i.passItem);
+        if (passItem && !gs().party[0].hasCloudPass && gs().coins < passItem.price) {
+            gs().coins = passItem.price; shopSystem.updateCoinDisplay(); shopSystem.renderItems(); gs().updateHUD();
+            note('assist', 'Gave the bot enough coins to buy the Cloud Stair Pass (' + passItem.price + ')');
+        }
+        const rank = (i) => i.passItem ? -1 : i.category === 'Charm' ? 0 : (i.weaponData && i.weaponData.skillType === skill) ? 2 : 1;
         const want = inv.filter(i => !(onlyMine && i.weaponData && i.weaponData.skillType !== skill)).sort((a, b) => rank(a) - rank(b) || a.price - b.price).map(i => i.id).filter(id => !boughtIds.has(id));
         for (const id of want) {
             const idx = shopSystem.inventory.findIndex(i => i.id === id);
@@ -591,6 +597,39 @@ const AutoPlay = (() => {
         }
     }
 
+    // the end of Chapter 4: the Cloud Stair Pass, the Stairs of Foam and the Sky Guards
+    async function skyGuardsFinale() {
+        const o = ow(), p = gs().party[0];
+        if (!p.hasCloudPass) { note('warn', 'The bot never got the Cloud Stair Pass'); return; }
+        milestone('pass', 'Bought the Cloud Stair Pass');
+        step('Taking the Cloud Stair Pass to the Stairs of Foam');
+        await walkTo(FOAM.x, FOAM.z + 22, { r: 4, timeout: 300, label: 'the Stairs of Foam' });
+        step('Showing the Sky Guards the Cloud Stair Pass');
+        const guards = SkyGuards.guards;
+        await walkTo(FOAM.x, FOAM.z - 33, { r: 3, timeout: 60, label: 'the Sky Guards' });
+        for (let tries = 0; tries < 6 && !SkyGuards.active; tries++) {
+            await until(() => o.nearPick && o.nearPick.guard, 3);
+            await sleep(0.4 * PM() + 0.2);
+            press('e');
+            if (await until(() => gs().state === 'dialogue', 2.5)) break;
+        }
+        await until(() => SkyGuards.active, 180);            // (they accuse the player of forging the pass...)
+        step('BOSS FIGHT: Stratus and Cirro, the Sky Guards');
+        const t0 = S.clock;
+        while (SkyGuards.active && S.clock - t0 < 900) {
+            const g = guards.find(x => x.data.hp > 0 && !x.invuln) || guards.find(x => x.data.hp > 0);
+            if (!g) { await sleep(0.3); continue; }
+            await fight(g, { timeout: 12, quiet: true });
+        }
+        await until(() => !SkyGuards.active, 30);
+        await settle();
+        if (o.guardState === 'done') milestone('guards', 'Defeated Stratus and Cirro, the Sky Guards'); else note('warn', 'The Sky Guards fight did not finish');
+        step('Walking through the gate and up the Stairs of Foam');
+        await walkTo(FOAM.x, FOAM.z - 46, { r: 3, timeout: 90, label: 'the gate', stopWhen: () => gs().isCutscene });
+        await until(() => !document.getElementById('chapter-end-ui').classList.contains('hidden'), 40);
+        milestone('foam', 'Climbed the Stairs of Foam (Chapter 5: The Sun of Time is next)');
+    }
+
     async function chapter4() {
         S.chapter = 'Chapter 4: The Sky Kingdom - Makani Village';
         step('Exploring the Sky Kingdom');
@@ -621,6 +660,7 @@ const AutoPlay = (() => {
             await settle();
             milestone('kite', 'Flew Iolana\'s Kite Ring Race' + (ow().kiteMedal ? ' (' + ['', 'Bronze', 'Silver', 'Gold'][ow().kiteMedal] + ')' : ''));
         }
+        await skyGuardsFinale();
     }
 
     // ---------------------------------------------------------------- start / stop / finish
