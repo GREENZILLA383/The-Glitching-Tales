@@ -271,7 +271,10 @@ const AutoPlay = (() => {
         if (g.state !== 'dialogue') { dlg.last = ''; dlg.at = now; return; }
         const txt = g.dialogueBox.querySelector('.dialogue-text').textContent;
         if (txt !== dlg.last) { dlg.last = txt; dlg.at = now; dlg.changes++; return; }
-        if (now - dlg.at >= readTime(txt.length)) { document.dispatchEvent(new MouseEvent('click', { bubbles: true })); dlg.last = ''; dlg.at = now; }
+        if (now - dlg.at >= readTime(txt.length)) {
+            if (window.Voices && Voices.speaking && CFG.speed !== 'fast' && now - dlg.at < readTime(txt.length) + 40) return;      // let the character finish talking first
+            document.dispatchEvent(new MouseEvent('click', { bubbles: true })); dlg.last = ''; dlg.at = now;
+        }
     }
 
     // the shop can pop open if we brush past the shopkeeper while collecting things: shut it again
@@ -830,7 +833,7 @@ const AutoPlay = (() => {
             let last = realNow();
             while (T.run) {
                 const n = realNow();
-                if (!T.muted && window.settingsSystem && typeof Sound !== 'undefined') { Sound.setVolume(0); T.muted = true; }   // (fast test runs are silent; this does not change the player's saved volume)
+                if (!T.muted && window.settingsSystem && typeof Sound !== 'undefined') { Sound.setVolume(0); if (window.Voices) Voices.enabled = false; T.muted = true; }   // (fast test runs are silent; this does not change the player's saved volume)
                 if (typeof overworld3d !== 'undefined' && overworld3d.playerObj && n - last >= 30 / F) { last = n; overworld3d.noRender = !T.draw; try { overworld3d.frame(0.03); } catch (e) { T.errors.push(e.message); } T.frames++; }
                 await yieldNow();
             }

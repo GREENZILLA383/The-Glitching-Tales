@@ -234,14 +234,16 @@ class GameSystem3D {
         const textContainer = this.dialogueBox.querySelector('.dialogue-text');
         textContainer.textContent = '';
         let i = 0;
+        const voiced = !!(window.Voices && Voices.speak(speaker, text));     // the character TALKS out loud
 
         const typeWriter = setInterval(() => {
             textContainer.textContent = text.substring(0, i + 1);
-            Sound.blip(speaker, i);
+            if (!voiced) Sound.blip(speaker, i);
             i++;
             if (i >= text.length) {
                 clearInterval(typeWriter);
                 const closeHandler = () => {
+                    if (window.Voices) Voices.stop();                 // (clicking on cuts the voice off)
                     this.dialogueBox.classList.add('hidden');
                     this.state = prevState;
                     document.removeEventListener('click', closeHandler);
@@ -257,7 +259,7 @@ class GameSystem3D {
                 };
                 setTimeout(() => document.addEventListener('click', closeHandler), 500);
             }
-        }, 30);
+        }, voiced ? 52 : 30);
     }
 
     endCutscene() {
@@ -474,6 +476,7 @@ class ShopSystem {
         const shop = this.shops[id] || this.shops.octo;
         this.inventory = shop.items;
         this.shopkeeperDialogue.innerText = shop.greeting;
+        if (window.Voices) Voices.speak(id === 'cashato' ? 'Cashato' : 'Shopkeeper', shop.greeting);
         this.shopTitle.innerText = shop.title;
         this.updateCoinDisplay();
         this.renderItems();
@@ -483,6 +486,7 @@ class ShopSystem {
     }
 
     closeShop() {
+        if (window.Voices) Voices.stop();
         this.shopUI.classList.add('hidden');
         if (overworld3d && overworld3d.controls) overworld3d.controls.lock();
         this.game.state = (window.GravityCore && GravityCore.active) ? 'core' : 'overworld';

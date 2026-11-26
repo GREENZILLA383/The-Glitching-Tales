@@ -3873,6 +3873,7 @@ class Overworld3D {
     // One step of the game. (animate() calls this every frame; the Test Bot and the tests can call it directly.)
     frame(delta) {
         if (window.AutoPlay && AutoPlay.active) AutoPlay.tick(delta);   // the Test Bot "presses the buttons" for this frame
+        if (window.Voices) Voices.update(delta);                        // (little talking bounce)
 
         if (window.GravityCore && GravityCore.active) {   // boss stage: its own little planet, its own rules
             GravityCore.update(delta);
